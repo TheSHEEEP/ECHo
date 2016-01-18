@@ -1,0 +1,13 @@
+{
+  "name": "ECHo",
+  "url" : "https://github.com/thesheeep/echo/",
+  "license": "MIT",
+  "tags": ["network", "server", "client", "cpp", "socket", "echo"],
+  "description": "Easy to use TCP client / host library with callbacks and host migration to use for games or other applications.",
+  "version": "0.0.1",
+  "releasenote": "First release.",
+  "contributors": ["Jan 'TheSHEEEP' Drabner"],
+  "dependencies": {
+    "lime": "2.8.3"
+  }
+}
