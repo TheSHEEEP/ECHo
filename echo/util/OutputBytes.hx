@@ -25,7 +25,7 @@ class OutputBytes extends BytesOutput
 	 * @param  {String} p_string The string to write.
 	 * @return {Void}
 	 */
-	override public function writeString(p_string :String) :Void
+	override public function writeString(p_string : String) : Void
 	{
 		writeInt32(Bytes.ofString(p_string).length);
 		super.writeString(p_string);

@@ -11,7 +11,7 @@ class CommandRegister
 	 */
 	private static var _instance : CommandRegister = null;
 	private function new() {}
-	public static function getInst() :CommandRegister
+	public static function getInst() : CommandRegister
 	{
 		if (_instance == null)
 		{
@@ -33,7 +33,7 @@ class CommandRegister
 	 * @param  {String} p_className		The class name to be used for the command. Use Type.getClassName().
 	 * @return {Void}
 	 */
-	public function registerCommand(p_commandName :String, p_className :String) :Void
+	public function registerCommand(p_commandName : String, p_className : String) : Void
 	{
 		_commandNameToClassName.set(p_commandName, p_className);
 	}
@@ -44,7 +44,7 @@ class CommandRegister
 	 * @param  {String} p_commandName The command name to look for.
 	 * @return {Int}	Returns -1 if no command with the name was found.
 	 */
-	public function getCommandId(p_commandName :String) : Int
+	public function getCommandId(p_commandName : String) : Int
 	{
 		if (_commandNameToId.exists(p_commandName))
 		{
@@ -60,7 +60,7 @@ class CommandRegister
 	 * @param  {String} p_className		The class name to be used for the command. Use Type.getClassName().
 	 * @return {Void}
 	 */
-	private function registerPredefinedCommand(p_commandName :String, p_className :String) :Void
+	private function registerPredefinedCommand(p_commandName : String, p_className : String) : Void
 	{
 		_predefinedCommandNameToClassName.set(p_commandName, p_className);
 	}
@@ -92,7 +92,7 @@ class CommandRegister
 	 * @param  {StringMap<String>} p_namesAndClassNames The StringMap to work on.
 	 * @return {Void}
 	 */
-	private function compileCommandIdsInternal(p_namesAndClassNames :StringMap<String>, p_predefined :Bool) : Void
+	private function compileCommandIdsInternal(p_namesAndClassNames : StringMap<String>, p_predefined : Bool) : Void
 	{
 		// Get the names
 		var nameArray : Array<String> = new Array<String>();
@@ -103,7 +103,7 @@ class CommandRegister
 
 		// Sort the Array
 		ArraySort.sort(nameArray,
-			function (left :String, right :String) :Int
+			function (left : String, right : String) : Int
 			{
 				left = left.toLowerCase();
 				right = right.toLowerCase();

@@ -14,7 +14,7 @@ class InputBytes extends BytesInput
 	 * Constructor.
 	 * @return {[type]}
 	 */
-    public function new(b:Bytes, ?pos:Int, ?len:Int)
+    public function new(b: Bytes, ?pos: Int, ?len: Int)
     {
 		super(b, 0, len);
     }
@@ -25,10 +25,10 @@ class InputBytes extends BytesInput
 	 * @param p_offset {Int}	The offset to read from within the string.
 	 * @return {String}
 	 */
-	override public function readString(p_offset :Int) :String
+	override public function readString(p_offset : Int) : String
 	{
-		var retVal :String = "";
-		var size :Int = readInt32();
+		var retVal : String = "";
+		var size : Int = readInt32();
 		retVal = super.readString(size);
 
 		// Apply offset

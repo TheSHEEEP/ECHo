@@ -21,7 +21,7 @@ class Command
 	 * @param  {String} p_name The name of the command.
 	 * @return {[type]}
 	 */
-	public function new(p_name :String)
+	public function new(p_name : String)
 	{
 		_name = p_name;
 		getId();
@@ -32,7 +32,7 @@ class Command
 	 * Returns the ID of this command.
 	 * @return {Int}
 	 */
-	public inline function getId() :Int
+	public inline function getId() : Int
 	{
 		// If not yet done, get the actual id from the register
 		if (_id == -1)
@@ -47,7 +47,7 @@ class Command
 	 * Returns the name of this command.
 	 * @return {String}
 	 */
-	public inline function getName() :String
+	public inline function getName() : String
 	{
 		return _name;
 	}
@@ -58,7 +58,7 @@ class Command
 	 * @param  {Int}  p_id The ID of the sender.
 	 * @return {Void}
 	 */
-	public function setSenderId(p_id :Int) :Void
+	public function setSenderId(p_id : Int) : Void
 	{
 		_senderId = p_id;
 	}
@@ -68,7 +68,7 @@ class Command
 	 * Returns the ID of the sender.
 	 * @return {Int}
 	 */
-	public function getSenderId() :Int
+	public function getSenderId() : Int
 	{
 		return _senderId;
 	}
@@ -79,7 +79,7 @@ class Command
 	 * @param  {Int}  p_id The ID of the recipient.
 	 * @return {Void}
 	 */
-	public function setRecipientId(p_id :Int) :Void
+	public function setRecipientId(p_id : Int) : Void
 	{
 		_recipientId = p_id;
 	}
@@ -89,7 +89,7 @@ class Command
 	 * Returns the ID of the recipient.
 	 * @return {Int}
 	 */
-	public function getRecipientId() :Int
+	public function getRecipientId() : Int
 	{
 		return _recipientId;
 	}
@@ -100,7 +100,7 @@ class Command
 	 * @param  {Float} p_timestamp The timestamp in milliseconds.
 	 * @return {Void}
 	 */
-	public function setTimestamp(p_timestamp :Float) :Void
+	public function setTimestamp(p_timestamp : Float) : Void
 	{
 		_timestamp = p_timestamp;
 	}
@@ -110,7 +110,7 @@ class Command
 	 * Returns the timestamp of this command (in milliseconds).
 	 * @return {Float}
 	 */
-	public function getTimestamp() :Float
+	public function getTimestamp() : Float
 	{
 		return _timestamp;
 	}
@@ -121,7 +121,7 @@ class Command
 	 * @param  {BytesOutput} p_outBuffer The buffer to fill.
 	 * @return {Void}
 	 */
-	public inline function writeBaseData(p_outBuffer :OutputBytes) :Void
+	public inline function writeBaseData(p_outBuffer : OutputBytes) : Void
 	{
 		p_outBuffer.writeInt32(_recipientId);
 		p_outBuffer.writeInt32(_senderId);
@@ -134,7 +134,7 @@ class Command
 	 * @param  {BytesInput} p_inBuffer [description]
 	 * @return {Void}
 	 */
-	public inline function readBaseData(p_inBuffer :InputBytes) :Void
+	public inline function readBaseData(p_inBuffer : InputBytes) : Void
 	{
 		_recipientId = p_inBuffer.readInt32();
 		_senderId = p_inBuffer.readInt32();
@@ -148,7 +148,7 @@ class Command
 	 * @param  {BytesBuffer} p_outBuffer The buffer to fill.
 	 * @return {Void}
 	 */
-	public function writeCommandData(p_outBuffer :OutputBytes) :Void
+	public function writeCommandData(p_outBuffer : OutputBytes) : Void
 	{
 		// Implement in subclass
 	}
@@ -159,7 +159,7 @@ class Command
 	 * @param  {BytesInput} p_inBuffer The buffer to read from.
 	 * @return {Void}
 	 */
-	public function readCommandData(p_inBuffer :InputBytes) :Void
+	public function readCommandData(p_inBuffer : InputBytes) : Void
 	{
 		// Implement in subclass
 	}
