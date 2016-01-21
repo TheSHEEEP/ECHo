@@ -12,14 +12,9 @@ import haxe.io.Error;
  * and receiving data from clients. Then, the thread will sleep for the rest of the tick's time.
  * @type {[type]}
  */
-class HostConnection
+class HostConnection extends ConnectionBase
 {
-	private var _port		: Int = 0;
-	private var _mainHost	: Host = null;
-	private var _mainSocket : Socket = null;
 	private var _maxConn	: Int = 0;
-
-	private var _tickTime	: Float = 0.05;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -31,33 +26,22 @@ class HostConnection
 	 */
     public function new(p_inAddr : String, p_port : Int, p_maxConn : Int)
     {
+		super(p_inAddr, p_port);
+
 		_port = p_port;
 		_maxConn = p_maxConn;
 
 		// Create the host
-		_mainSocket = new Socket();
-		_mainHost = new Host(p_inAddr);
 		_mainSocket.setBlocking(true);
 		_mainSocket.bind(_mainHost, _port);
     }
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
-	 * Set the time a single tick shall take.
-	 * @param  {Float} p_time [description]
-	 * @return {Void}
-	 */
-	public inline function setTickTime(p_time : Float) : Void
-	{
-		_tickTime = p_time;
-	}
-
-	//------------------------------------------------------------------------------------------------------------------
-	/**
 	 * The main thread function of the host thread.
 	 * @return {Void}
 	 */
-	public function threadFunc() : Void
+	override public function threadFunc() : Void
 	{
 		// Start listening (with additional connections so that we can send custom replies in case of a full room)
 		_mainSocket.listen(_maxConn + 2);

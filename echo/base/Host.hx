@@ -8,10 +8,8 @@ import cpp.vm.Thread;
  * Used to listen on a port, handle incoming connections, command handling, etc.
  * @type {[type]}
  */
-class Host
+class Host extends ClientHostBase
 {
-    private var _hostConnection : HostConnection;
-    private var _hostThread     : Thread;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -22,9 +20,11 @@ class Host
 	 */
     public function new(p_maxConn : Int = 5, p_inaddr : String = "0.0.0.0", p_port : Int = 20301)
     {
+		super();
+
         // Create the host thread
-        _hostConnection = new HostConnection(p_inaddr, p_port, p_maxConn);
-        _hostThread = Thread.create(_hostConnection.threadFunc);
+        _connection = new HostConnection(p_inaddr, p_port, p_maxConn);
+        _thread = Thread.create(_connection.threadFunc);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -32,8 +32,8 @@ class Host
      * Updates the host, executing commands (aka calling their callbacks).
      * @return {Void}
      */
-    public function update() : Void
+    override public function update() : Void
     {
-        // TODO: here
+		super.update();
     }
 }

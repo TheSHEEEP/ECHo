@@ -15,6 +15,8 @@ class Command
 	private var _senderId		: Int = -1;
 	private var _timestamp		: Float = 0.0;
 
+	public var errorMsg : String = "";
+
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.

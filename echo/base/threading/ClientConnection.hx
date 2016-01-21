@@ -12,13 +12,9 @@ import haxe.io.Error;
  * and receiving data from the host. Then, the thread will sleep for the rest of the tick's time.
  * @type {[type]}
  */
-class ClientConnection
+class ClientConnection extends ConnectionBase
 {
-	private var _port			: Int = 0;
-	private var _mainHost		: Host = null;
-	private var _mainSocket 	: Socket = null;
 	private var _isConnected 	: Bool = false;
-	private var _tickTime		: Float = 0.05;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -29,24 +25,11 @@ class ClientConnection
 	 */
     public function new(p_hostAddr : String, p_port : Int)
     {
-		_port = p_port;
+		super(p_hostAddr, p_port);
 
 		// Create the socket the host
-		_mainSocket = new Socket();
-		_mainHost = new Host(p_hostAddr);
 		_mainSocket.setBlocking(true);
     }
-
-	//------------------------------------------------------------------------------------------------------------------
-	/**
-	 * Set the time a single tick shall take.
-	 * @param  {Float} p_time [description]
-	 * @return {Void}
-	 */
-	public inline function setTickTime(p_time : Float) : Void
-	{
-		_tickTime = p_time;
-	}
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -63,7 +46,7 @@ class ClientConnection
 	 * The client's main thread function.
 	 * @return {Void}
 	 */
-	public function threadFunc() : Void
+	override public function threadFunc() : Void
 	{
 		// Main loop
 		var startTime : Float = 0.0;
