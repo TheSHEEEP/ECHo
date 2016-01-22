@@ -2,6 +2,7 @@ package echo.commandInterface;
 
 import haxe.ds.ArraySort;
 import haxe.ds.StringMap;
+import echo.ECHo;
 
 class CommandRegister
 {

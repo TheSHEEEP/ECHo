@@ -4,6 +4,7 @@ import sys.net.Socket;
 import sys.net.Host;
 import haxe.Timer;
 import haxe.io.Error;
+import echo.base.data.ExtendedClientData;
 
 /**
  * The class doing all of the client's socket interaction.
@@ -16,6 +17,8 @@ class ClientConnection extends ConnectionBase
 {
 	private var _isConnected 	: Bool = false;
 
+	private var _hostData	: ExtendedClientData = new ExtendedClientData();
+
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.
@@ -27,8 +30,9 @@ class ClientConnection extends ConnectionBase
     {
 		super(p_hostAddr, p_port);
 
-		// Create the socket the host
+		// Create the socket
 		_mainSocket.setBlocking(true);
+		_hostData.socket = _mainSocket;
     }
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -42,6 +46,7 @@ class ClientConnection extends ConnectionBase
 		return _isConnected;
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * The client's main thread function.
 	 * @return {Void}
@@ -62,6 +67,12 @@ class ClientConnection extends ConnectionBase
 				doHostConnection();
 			}
 
+			// Send to host step
+			doSendStep();
+
+			// Receive from host step
+			doListenStep();
+
 			// Sleep
 			currentTickTime = Timer.stamp() - startTime;
 			sleepTime = _tickTime - currentTickTime;
@@ -72,6 +83,7 @@ class ClientConnection extends ConnectionBase
 		}
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Will attempt to connect to a host.
 	 * @return {Void}
@@ -82,6 +94,7 @@ class ClientConnection extends ConnectionBase
 		{
 			_mainSocket.setTimeout(1.0);
 			_mainSocket.connect(_mainHost, _port);
+			_mainSocket.setBlocking(false);
 			_isConnected = true;
 
 			trace("Successfully connected to host.");
@@ -99,6 +112,61 @@ class ClientConnection extends ConnectionBase
 		catch (error : Dynamic)
 		{
 			trace("Unexpected error in doHostConnection 2: " + error);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Send commands & remaining bytes to the host.
+	 * @return {Void}
+	 */
+	public function doSendStep() : Void
+	{
+		try
+		{
+
+		}
+		catch (stringError : String)
+		{
+			switch (stringError)
+			{
+			case "Blocking":
+				// Expected
+			default:
+				trace("Unexpected error in doSendStep 1: " + stringError + ".");
+			}
+		}
+		catch (error : Dynamic)
+		{
+			trace("Unexpected error in doSendStep 2: " + error);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Listen to incoming commands from the host.
+	 * @return {Void}
+	 */
+	public function doListenStep() : Void
+	{
+		try
+		{
+			// Try to receive as many commands as possible
+			receiveCommands(_hostData);
+		}
+		catch (stringError : String)
+		{
+			switch (stringError)
+			{
+			case "Blocking":
+				// Expected
+			default:
+				trace("Unexpected error in doListenStep 1: " + stringError + ".");
+			}
+		}
+		catch (error : Dynamic)
+		{
+			trace("Unexpected error in doListenStep 2: " + error);
 		}
 	}
 }

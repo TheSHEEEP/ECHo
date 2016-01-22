@@ -31,10 +31,118 @@ class ClientHostBase
 	 */
 	public function new()
 	{
-		_outCommands = new Array<Command>();
-		_outCommandsMutex = new Mutex();
-		_inCommands = new Array<Command>();
-		_inCommandsMutex = new Mutex();
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Adds a callback function to be called before the execution of the command.
+	 * @param  {Int}		   p_id	  The ID of the command.
+	 * @param  {Command->Bool} p_func The function to be used as a callback.
+	 * @return {Void}
+	 */
+	public function addPreCommandCallback(p_id : Int, p_func : Command->Bool) : Void
+	{
+		if (!_preCommandListeners.exists(p_id))
+		{
+			_preCommandListeners.set(p_id, new Array<Command->Bool>());
+		}
+		var array : Array<Command->Bool> = _preCommandListeners.get(p_id);
+		array.push(p_func);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Adds a callback function to be called as the execution of the command.
+	 * @param  {Int}		   p_id	  The ID of the command.
+	 * @param  {Command->Bool} p_func The function to be used as a callback.
+	 * @return {Void}
+	 */
+	public function addCommandCallback(p_id : Int, p_func : Command->Bool) : Void
+	{
+		if (!_commandListeners.exists(p_id))
+		{
+			_commandListeners.set(p_id, new Array<Command->Bool>());
+		}
+		var array : Array<Command->Bool> = _commandListeners.get(p_id);
+		array.push(p_func);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Adds a callback function to be called after the execution of the command.
+	 * @param  {Int}		   p_id	  The ID of the command.
+	 * @param  {Command->Bool} p_func The function to be used as a callback.
+	 * @return {Void}
+	 */
+	public function addPostCommandCallback(p_id : Int, p_func : Command->Bool->Void) : Void
+	{
+		if (!_postCommandListeners.exists(p_id))
+		{
+			_postCommandListeners.set(p_id, new Array<Command->Bool->Void>());
+		}
+		var array : Array<Command->Bool->Void> = _postCommandListeners.get(p_id);
+		array.push(p_func);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Removes the passed callback function.
+	 * @param  {Int}           p_id   The ID of the command to remove the callback from.
+	 * @param  {Command->Bool} p_func The callback function to remove.
+	 * @return {Void}
+	 */
+	public function removePreCommandCallback(p_id : Int, p_func : Command->Bool) : Void
+	{
+		if (_preCommandListeners.exists(p_id))
+		{
+			var array : Array<Command->Bool> = _preCommandListeners.get(p_id);
+			array.remove(p_func);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Removes the passed callback function.
+	 * @param  {Int}           p_id   The ID of the command to remove the callback from.
+	 * @param  {Command->Bool} p_func The callback function to remove.
+	 * @return {Void}
+	 */
+	public function removeCommandCallback(p_id : Int, p_func : Command->Bool) : Void
+	{
+		if (_commandListeners.exists(p_id))
+		{
+			var array : Array<Command->Bool> = _commandListeners.get(p_id);
+			array.remove(p_func);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Removes the passed callback function.
+	 * @param  {Int}           p_id   The ID of the command to remove the callback from.
+	 * @param  {Command->Bool} p_func The callback function to remove.
+	 * @return {Void}
+	 */
+	public function removePostCommandCallback(p_id : Int, p_func : Command->Bool->Void) : Void
+	{
+		if (_postCommandListeners.exists(p_id))
+		{
+			var array : Array<Command->Bool->Void> = _postCommandListeners.get(p_id);
+			array.remove(p_func);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Will add the passed command to send out as soon as possible.
+	 * @param  {Command} p_command The command to send. Make sure it is set up properly.
+	 * @return {Void}
+	 */
+	public function sendCommand(p_command : Command) : Void
+	{
+		_outCommandsMutex.acquire();
+		_outCommands.push(p_command);
+		_outCommandsMutex.release();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -46,9 +154,6 @@ class ClientHostBase
 	{
 		// Handle incoming messages
 		handleIncomingMessages();
-
-		// handle outgoing messages
-		handleOutgoingMessages();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -58,11 +163,16 @@ class ClientHostBase
 	 */
 	private function handleIncomingMessages() : Void
 	{
+		// Copy the array to block the mutex as little as possible
+		_inCommandsMutex.acquire();
+		var commands :Array<Command> = _inCommands.splice(0, _inCommands.length);
+		_inCommandsMutex.release();
+
 		// Iterate over all incoming commands
 		var id : Int = -1;
 		var abort : Bool = false;
 		var success : Bool = false;
-		for (command in _inCommands)
+		for (command in commands)
 		{
 			id = command.getId();
 
@@ -72,7 +182,7 @@ class ClientHostBase
 				for (callback in _preCommandListeners.get(id))
 				{
 					var result : Bool = callback(command);
-					abort = (result ? abort : result);
+					abort = (result ? abort : false);
 				}
 			}
 
@@ -82,7 +192,7 @@ class ClientHostBase
 				for (callback in _commandListeners.get(id))
 				{
 					var result : Bool = callback(command);
-					success = (!result ? result : success);
+					success = (result ? success : false);
 				}
 			}
 
@@ -95,16 +205,5 @@ class ClientHostBase
 				}
 			}
 		}
-	}
-
-
-	//------------------------------------------------------------------------------------------------------------------
-	/**
-	 * Handle the outgoing messages, sending them to their recipients.
-	 * @return {Void}
-	 */
-	private function handleOutgoingMessages() : Void
-	{
-		// TODO: here
 	}
 }

@@ -1,8 +1,9 @@
 package echo.base;
 
 import cpp.vm.Thread;
-import echo.base.threading.ClientConnection;
 import cpp.vm.Mutex;
+import echo.base.threading.ClientConnection;
+import echo.base.data.ClientData;
 
 /**
  * Client class.
@@ -14,6 +15,8 @@ class Client extends ClientHostBase
 	private var _clientConnection	: ClientConnection;
 	private var _clientThread		: Thread;
 
+	private var _clientData : ClientData = new ClientData();
+
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.
@@ -21,11 +24,14 @@ class Client extends ClientHostBase
 	 * @param  {Int	= 20301}	   p_port	 The port to connect to.
 	 * @return {[type]}
 	 */
-	public function new(p_hostAddr : String = "localhost", p_port : Int = 20301)
+	public function new(p_identifier : String, p_hostAddr : String = "localhost", p_port : Int = 20301)
 	{
 		super();
 
+		_clientData.identifier = p_identifier;
+		
 		_clientConnection = new ClientConnection(p_hostAddr, p_port);
+		_clientConnection.setSharedData(_inCommands, _inCommandsMutex, _outCommands, _outCommandsMutex);
 		_clientThread = Thread.create(_clientConnection.threadFunc);
 	}
 
@@ -38,6 +44,16 @@ class Client extends ClientHostBase
 	public function isConnected() : Bool
 	{
 		return _clientConnection.isConnected();
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Returns the ClientData of this client.
+	 * @return {ClientData}
+	 */
+	public inline function getClientData() : ClientData
+	{
+		return _clientData;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

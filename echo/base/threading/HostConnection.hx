@@ -4,6 +4,12 @@ import sys.net.Socket;
 import sys.net.Host;
 import haxe.Timer;
 import haxe.io.Error;
+import echo.base.data.ClientData;
+import echo.base.data.ExtendedClientData;
+import echo.commandInterface.commands.RejectConnection;
+import echo.commandInterface.commands.InviteClient;
+import echo.commandInterface.commands.Ping;
+import echo.commandInterface.commands.Pong;
 
 /**
  * The class doing all of the host's socket interaction.
@@ -15,6 +21,9 @@ import haxe.io.Error;
 class HostConnection extends ConnectionBase
 {
 	private var _maxConn	: Int = 0;
+
+	private var _connectionCandidates	: Array<ExtendedClientData> = new Array<ExtendedClientData>();
+	private var _connectedClients 		: Array<ExtendedClientData> = new Array<ExtendedClientData>();
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -60,8 +69,10 @@ class HostConnection extends ConnectionBase
 			doAcceptStep();
 
 			// Sending to clients step
+			doSendStep();
 
 			// Listening to clients step
+			doListenStep();
 
 			// Sleep
 			currentTickTime = Timer.stamp() - startTime;
@@ -84,9 +95,32 @@ class HostConnection extends ConnectionBase
 		{
 			// Accept an incoming connection
 			var connectedClient : Socket = _mainSocket.accept();
+			connectedClient.setFastSend(true);
+			connectedClient.setBlocking(false);
+			var data : ExtendedClientData = new ExtendedClientData();
+			data.ip = connectedClient.peer().host.toString();
+			data.socket = connectedClient;
 
 			trace("Incoming connection from " + connectedClient.peer().host.toString() + " on port "
 					+ connectedClient.peer().port);
+
+			// If we have too many clients already connected, send the reject message and close
+			if (_connectedClients.length >= _maxConn)
+			{
+				var command : RejectConnection = new RejectConnection();
+				command.reason = RejectionReason.RoomIsFull;
+				sendCommand(command, data, true);
+				connectedClient.close();
+			}
+			else
+			{
+				// Add this one to the candidates
+				_connectionCandidates.push(data);
+
+				// Send invitation message
+				var command : InviteClient = new InviteClient();
+				sendCommand(command, data);
+			}
 		}
 		catch (stringError : String)
 		{
@@ -101,6 +135,73 @@ class HostConnection extends ConnectionBase
 		catch (error : Dynamic)
 		{
 			trace("Unexpected error in doAcceptStep 2: " + error);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Does the sending to connected clients and candidates.
+	 * @return {Void}
+	 */
+	private function doSendStep() : Void
+	{
+		try
+		{
+			// Send to candidates first
+			for (candidate in _connectionCandidates)
+			{
+				// Send commands
+
+				// Send leftover bytes
+				sendLeftoverBytes(candidate);
+			}
+
+			// Send to clients
+		}
+		catch (stringError : String)
+		{
+			switch (stringError)
+			{
+			case "Blocking":
+				// Expected
+			default:
+				trace("Unexpected error in doSendStep 1: " + stringError);
+			}
+		}
+		catch (error : Dynamic)
+		{
+			trace("Unexpected error in doSendStep 2: " + error);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Does the listening to connected clients and candidates.
+	 * @return {Void}
+	 */
+	private function doListenStep() : Void
+	{
+		try
+		{
+			// Listen to candidates first
+			for (candidate in _connectionCandidates)
+			{
+
+			}
+		}
+		catch (stringError : String)
+		{
+			switch (stringError)
+			{
+			case "Blocking":
+				// Expected
+			default:
+				trace("Unexpected error in doListenStep 1: " + stringError);
+			}
+		}
+		catch (error : Dynamic)
+		{
+			trace("Unexpected error in doListenStep 2: " + error);
 		}
 	}
 }

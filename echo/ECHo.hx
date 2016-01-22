@@ -4,7 +4,6 @@ import echo.commandInterface.CommandRegister;
 import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
 
-
 /**
  * ECHo startup & shutdown class.
  * @type {[type]}
@@ -15,9 +14,9 @@ class ECHo
 
 	/**
 	 * Log levels are:
-	 * 0	- None
-	 * 1	- Errors only
-	 * 5 	- Everything
+	 * 0	- Nothing
+	 * 1	- Errors
+	 * 5	- Everything
 	 * @type {Int}
 	 */
 	public static var logLevel : Int = 5;
