@@ -180,25 +180,97 @@ class ConnectionBase
 	/**
 	 * Tries to read as many full commands as possible from the passed client data.
 	 * @param  {ExtendedClientData} p_clientData The client data to use for the connection.
-	 * @return {Void}
+	 * @return {Void}gel
 	 */
 	private function receiveCommands(p_clientData : ExtendedClientData) : Void
 	{
 		var socket : Socket = p_clientData.socket;
 
-		// Read as much data as possible
+		// Read as much data as possible (this is non-blocking, remember)
 		var inBytes : Bytes = socket.input.readAll();
 
-		// Got nothing, return
-		if (inBytes.length == 0)
+		// Read the input until everything is processes or at least stored
+		while (inBytes.length > 0)
 		{
-			return;
-		}
+			// Do we expect some leftover data?
+			if (p_clientData.expectedRestReceive > 0)
+			{
+				// If the inBytes are enough, we can finish the currently waited for command
+				if (inBytes.length >= p_clientData.expectedRestReceive)
+				{
+					p_clientData.recvBuffer.addBytes(inBytes, 0, p_clientData.expectedRestReceive);
 
-		// Do we expect some leftover data?
-		if (p_clientData.expectedRestReceive > 0)
-		{
-			// TODO: here
-		}
+					// Store the command
+					storeCommandFromData(p_clientData, null);
+
+					// Shorten the inBytes
+					inBytes = inBytes.sub(	p_clientData.expectedRestReceive,
+											inBytes.length - p_clientData.expectedRestReceive);
+					p_clientData.expectedRestReceive = 0;
+				}
+				// If the inBytes are not enough, just add them to the receive buffer and continue waiting
+				else
+				{
+					p_clientData.recvBuffer.addBytes(inBytes, 0, inBytes.length);
+					p_clientData.expectedRestReceive -= inBytes.length;
+					inBytes = inBytes.sub(0, 0);
+				}
+			}
+			// If we are not waiting for rest of the data for the current command...
+			else
+			{
+				// Make sure we have at least four bytes, as those tell the size of the entire command
+				if (inBytes.length >= 4)
+				{
+					p_clientData.expectedRestReceive = inBytes.getInt32(0);
+					inBytes = inBytes.sub(4, inBytes.length - 4);
+
+					// Do we even have all the data for the command?
+					if (inBytes.length >= p_clientData.expectedRestReceive)
+					{
+						// Store it!
+						storeCommandFromData(p_clientData, inBytes);
+
+						// Shorten the inBytes
+						inBytes = inBytes.sub(	p_clientData.expectedRestReceive,
+												inBytes.length - p_clientData.expectedRestReceive);
+					}
+					// If not, just store in the client data's receive buffer
+					else
+					{
+						p_clientData.recvBuffer = new BytesBuffer();
+						p_clientData.recvBuffer.addBytes(inBytes, 0, inBytes.length);
+						p_clientData.expectedRestReceive -= inBytes.length;
+						inBytes = inBytes.sub(0, 0);
+					}
+				}
+				else
+				{
+					if (ECHo.logLevel >= 1)
+					{
+						trace("Error: Not even the first 4 bytes of command could be received. If this ever happens, it must be handled by ECHo. Which it does not currently do...");
+					}
+				}
+			} // END new command begins
+		} // END while inBytes.length > 0
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Will store the command from the passed data.
+	 * @param  {ExtendedClientData} p_clientData The client data associated with this command.
+	 * @param  {BytesBuffer}        p_bytes      The bytes to read from. Can be null to use p_clientData's recvBuffer instead. If they are not null, they MUST contain the entire command.
+	 * @return {Void}
+	 */
+	private function storeCommandFromData(p_clientData : ExtendedClientData, p_bytes : Bytes) : Void
+	{
+		// First, we need to get the correct class instance from the ID
+		// TODO: here
+		
+		// Now read the data
+		var source : Bytes = (p_bytes != null) ? p_bytes : p_clientData.recvBuffer.getBytes();
+		p_clientData.recvBuffer = new BytesBuffer();
+
+		// Store it
 	}
 }

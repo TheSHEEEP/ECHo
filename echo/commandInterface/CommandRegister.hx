@@ -2,6 +2,7 @@ package echo.commandInterface;
 
 import haxe.ds.ArraySort;
 import haxe.ds.StringMap;
+import haxe.ds.IntMap;
 import echo.ECHo;
 
 class CommandRegister
@@ -26,6 +27,7 @@ class CommandRegister
 	private var _commandNameToClassName 			: StringMap<String> = new StringMap<String>();
 	private var _predefinedCommandNameToClassName 	: StringMap<String> = new StringMap<String>();
 	private var _commandNameToId					: StringMap<Int> = new StringMap<Int>();
+	private var _idToClass							: IntMap<Class<Dynamic>> = new IntMap<Class<Dynamic>>();
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -114,11 +116,32 @@ class CommandRegister
 			}
 		);
 
-		// Apply the IDs to the command names
+		// Apply the IDs to the command names, and store id -> class
 		var offset : Int = p_predefined ? 0 : 300;
 		for (i in 0 ... nameArray.length)
 		{
 			_commandNameToId.set(nameArray[i], i + offset);
+
+			// Store ID -> class
+			var name : String = _commandNameToClassName.get(nameArray[i]);
+			var theClass : Class<Dynamic>= Type.resolveClass(name);
+			_idToClass.set(i + offset, theClass);
 		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Will return the class for the passed ID. NOT an instance of it!
+	 * @param  {Int}     p_id The ID to look for.
+	 * @return {Class<Command>}
+	 */
+	public function getCommandClass(p_id : Int) : Class<Command>
+	{
+		if (!_idToClass.exists(p_id))
+		{
+			return null;
+		}
+
+		return cast _idToClass.get(p_id);
 	}
 }

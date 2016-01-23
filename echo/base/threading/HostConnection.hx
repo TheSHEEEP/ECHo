@@ -201,7 +201,21 @@ class HostConnection extends ConnectionBase
 		}
 		catch (error : Dynamic)
 		{
-			trace("Unexpected error in doListenStep 2: " + error);
+			if (Std.is(error, Error))
+			{
+				if (cast(error, Error).equals(Blocked))
+				{
+					// Expected
+				}
+				else
+				{
+					trace("Unexpected error in host doListenStep 2: " + error);
+				}
+			}
+			else
+			{
+				trace("Unexpected error in host doListenStep 3: " + error);
+			}
 		}
 	}
 }
