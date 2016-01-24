@@ -3,6 +3,8 @@ package echo;
 import echo.commandInterface.CommandRegister;
 import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
+import echo.commandInterface.commands.InviteClient;
+import echo.commandInterface.commands.RejectConnection;
 
 /**
  * ECHo startup & shutdown class.
@@ -16,6 +18,7 @@ class ECHo
 	 * Log levels are:
 	 * 0	- Nothing
 	 * 1	- Errors
+	 * 2 	- Warnings
 	 * 5	- Everything
 	 * @type {Int}
 	 */
@@ -36,6 +39,12 @@ class ECHo
 		Reflect.callMethod(CommandRegister.getInst(),
 							Reflect.field(CommandRegister.getInst(), "registerPredefinedCommand"),
 							["pong", Type.getClassName(Pong)]);
+		Reflect.callMethod(CommandRegister.getInst(),
+							Reflect.field(CommandRegister.getInst(), "registerPredefinedCommand"),
+							["inviteClient", Type.getClassName(InviteClient)]);
+		Reflect.callMethod(CommandRegister.getInst(),
+							Reflect.field(CommandRegister.getInst(), "registerPredefinedCommand"),
+							["rejectConnection", Type.getClassName(RejectConnection)]);
 
 		// Compile command IDs
 		Reflect.callMethod(CommandRegister.getInst(),

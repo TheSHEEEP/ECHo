@@ -174,7 +174,7 @@ class ClientHostBase
 		var success : Bool = false;
 		for (command in commands)
 		{
-			id = command.getId();
+			id = command.getCommandId();
 
 			// Pre-command listeners
 			if (_preCommandListeners.exists(id))

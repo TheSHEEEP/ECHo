@@ -14,9 +14,9 @@ class InputBytes extends BytesInput
 	 * Constructor.
 	 * @return {[type]}
 	 */
-    public function new(b: Bytes, ?pos: Int, ?len: Int)
+    public function new(p_b : Bytes)
     {
-		super(b, 0, len);
+		super(p_b, 0, p_b.length);
     }
 
 	//------------------------------------------------------------------------------------------------------------------

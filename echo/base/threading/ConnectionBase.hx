@@ -5,8 +5,11 @@ import sys.net.Socket;
 import cpp.vm.Mutex;
 import haxe.io.Bytes;
 import haxe.io.BytesBuffer;
+import haxe.io.Error;
 import echo.base.data.ExtendedClientData;
 import echo.commandInterface.Command;
+import echo.commandInterface.CommandFactory;
+import echo.commandInterface.CommandRegister;
 import echo.util.InputBytes;
 import echo.util.OutputBytes;
 
@@ -27,6 +30,8 @@ class ConnectionBase
 	private var _inCommands			: Array<Command> = null;
 	private var _inCommandsMutex	: Mutex = null;
 
+	private var _readBytes : Bytes = null;
+
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.
@@ -41,6 +46,9 @@ class ConnectionBase
 		// Create Socket & Host
 		_mainSocket = new Socket();
 		_mainHost = new Host(p_addr);
+
+		// Create the byte buffer to use for reading
+		_readBytes = Bytes.alloc(2048);
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -94,6 +102,7 @@ class ConnectionBase
 	{
 		// Create the command data
 		var tempBuffer : OutputBytes = new OutputBytes();
+		tempBuffer.writeInt32(p_command.getCommandId());
 		p_command.writeBaseData(tempBuffer);
 		p_command.writeCommandData(tempBuffer);
 
@@ -187,61 +196,98 @@ class ConnectionBase
 		var socket : Socket = p_clientData.socket;
 
 		// Read as much data as possible (this is non-blocking, remember)
-		var inBytes : Bytes = socket.input.readAll();
+		var toRead : Int = 0;
+		try
+		{
+			toRead = socket.input.readBytes(_readBytes, 0, 512);
+		}
+		catch (stringError : String)
+		{
+			switch (stringError)
+			{
+			case "Blocking":
+				// Expected
+			default:
+				if (ECHo.logLevel >= 1) trace("Unexpected error in receiveCommands 1: " + stringError + ".");
+			}
+		}
+		catch (error : Dynamic)
+		{
+			if (Std.is(error, Error))
+			{
+				if (cast(error, Error).equals(Blocked))
+				{
+					// Expected
+				}
+				else
+				{
+					if (ECHo.logLevel >= 1) trace("Unexpected error in receiveCommandsp 2: " + error);
+				}
+			}
+			else
+			{
+				if (ECHo.logLevel >= 1) trace("Unexpected error in receiveCommands 3: " + error);
+			}
+		}
 
 		// Read the input until everything is processes or at least stored
-		while (inBytes.length > 0)
+		var pos : Int = 0;
+		while (toRead > 0)
 		{
 			// Do we expect some leftover data?
 			if (p_clientData.expectedRestReceive > 0)
 			{
 				// If the inBytes are enough, we can finish the currently waited for command
-				if (inBytes.length >= p_clientData.expectedRestReceive)
+				if (toRead >= p_clientData.expectedRestReceive)
 				{
-					p_clientData.recvBuffer.addBytes(inBytes, 0, p_clientData.expectedRestReceive);
+					p_clientData.recvBuffer.addBytes(_readBytes, pos, p_clientData.expectedRestReceive);
 
 					// Store the command
 					storeCommandFromData(p_clientData, null);
 
-					// Shorten the inBytes
-					inBytes = inBytes.sub(	p_clientData.expectedRestReceive,
-											inBytes.length - p_clientData.expectedRestReceive);
+					// Advance position
+					pos += p_clientData.expectedRestReceive;
+					toRead -= p_clientData.expectedRestReceive;
 					p_clientData.expectedRestReceive = 0;
 				}
 				// If the inBytes are not enough, just add them to the receive buffer and continue waiting
 				else
 				{
-					p_clientData.recvBuffer.addBytes(inBytes, 0, inBytes.length);
-					p_clientData.expectedRestReceive -= inBytes.length;
-					inBytes = inBytes.sub(0, 0);
+					p_clientData.recvBuffer.addBytes(_readBytes, pos, toRead);
+					p_clientData.expectedRestReceive -= toRead;
+					pos += toRead;
+					toRead = 0;
 				}
 			}
 			// If we are not waiting for rest of the data for the current command...
 			else
 			{
 				// Make sure we have at least four bytes, as those tell the size of the entire command
-				if (inBytes.length >= 4)
+				if (toRead >= 4)
 				{
-					p_clientData.expectedRestReceive = inBytes.getInt32(0);
-					inBytes = inBytes.sub(4, inBytes.length - 4);
+					p_clientData.expectedRestReceive = _readBytes.getInt32(0);
+					if (ECHo.logLevel >= 5) trace("Expected command size: " + p_clientData.expectedRestReceive);
+					pos += 4;
+					toRead -= 4;
 
 					// Do we even have all the data for the command?
-					if (inBytes.length >= p_clientData.expectedRestReceive)
+					if (toRead >= p_clientData.expectedRestReceive)
 					{
 						// Store it!
-						storeCommandFromData(p_clientData, inBytes);
+						storeCommandFromData(p_clientData, _readBytes.sub(pos, p_clientData.expectedRestReceive));
 
 						// Shorten the inBytes
-						inBytes = inBytes.sub(	p_clientData.expectedRestReceive,
-												inBytes.length - p_clientData.expectedRestReceive);
+						pos += p_clientData.expectedRestReceive;
+						toRead -= p_clientData.expectedRestReceive;
 					}
 					// If not, just store in the client data's receive buffer
 					else
 					{
 						p_clientData.recvBuffer = new BytesBuffer();
-						p_clientData.recvBuffer.addBytes(inBytes, 0, inBytes.length);
-						p_clientData.expectedRestReceive -= inBytes.length;
-						inBytes = inBytes.sub(0, 0);
+						p_clientData.recvBuffer.addBytes(_readBytes, 0, toRead);
+						p_clientData.expectedRestReceive -= toRead;
+						pos += toRead;
+						toRead = 0;
 					}
 				}
 				else
@@ -264,13 +310,40 @@ class ConnectionBase
 	 */
 	private function storeCommandFromData(p_clientData : ExtendedClientData, p_bytes : Bytes) : Void
 	{
-		// First, we need to get the correct class instance from the ID
-		// TODO: here
-		
-		// Now read the data
-		var source : Bytes = (p_bytes != null) ? p_bytes : p_clientData.recvBuffer.getBytes();
+		// Use the correct source
+		var source : InputBytes;
+		if (p_bytes != null)
+		{
+			source = new InputBytes(p_bytes);
+		}
+		else
+		{
+			source = new InputBytes(p_clientData.recvBuffer.getBytes());
+		}
 		p_clientData.recvBuffer = new BytesBuffer();
 
+		// Get a command instance from the ID
+		var id : Int = source.readInt32();
+		var command : Command = CommandFactory.getInst().createCommand(id);
+		if (command == null)
+		{
+			if (ECHo.logLevel >= 1) trace("Error: storeCommandFromData: Could not store incoming command, "
+											+ "id unknown: " + id);
+			return;
+		}
+		if (ECHo.logLevel >= 5) trace("Storing incoming command " + command.getName());
+
+		// Read the data
+		command.readBaseData(source);
+		command.readCommandData(source);
+		if (source.position != source.length)
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: storeCommandFromData: there are unused bytes after "
+											+ "reading input command: " + command.getName() + " "
+											+ source.position + "/" + source.length);
+		}
+
 		// Store it
+		_inCommands.push(command);
 	}
 }

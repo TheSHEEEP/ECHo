@@ -7,10 +7,13 @@ import echo.util.OutputBytes;
  * The base class for a command.
  * @type {[type]}
  */
+#if !macro
+@:build(echo.util.CommandBuildMacro.addGetId())
+@:autoBuild(echo.util.CommandBuildMacro.addGetId(true))
+#end
 class Command
 {
 	private var _name 			: String = "";
-	private var _id 			: Int = -1;
 	private var _recipientId	: Int = -1;
 	private var _senderId		: Int = -1;
 	private var _timestamp		: Float = 0.0;
@@ -27,21 +30,6 @@ class Command
 	{
 		_name = p_name;
 		getId();
-	}
-
-	//------------------------------------------------------------------------------------------------------------------
-	/**
-	 * Returns the ID of this command.
-	 * @return {Int}
-	 */
-	public inline function getId() : Int
-	{
-		// If not yet done, get the actual id from the register
-		if (_id == -1)
-		{
-			_id = CommandRegister.getInst().getCommandId(_name);
-		}
-		return _id;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

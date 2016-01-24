@@ -101,8 +101,8 @@ class HostConnection extends ConnectionBase
 			data.ip = connectedClient.peer().host.toString();
 			data.socket = connectedClient;
 
-			trace("Incoming connection from " + connectedClient.peer().host.toString() + " on port "
-					+ connectedClient.peer().port);
+			if (ECHo.logLevel >= 5) trace("Incoming connection from " + connectedClient.peer().host.toString()
+										+ " on port " + connectedClient.peer().port);
 
 			// If we have too many clients already connected, send the reject message and close
 			if (_connectedClients.length >= _maxConn)
@@ -129,12 +129,12 @@ class HostConnection extends ConnectionBase
 			case "Blocking":
 				// Expected
 			default:
-				trace("Unexpected error in doAcceptStep 1: " + stringError);
+				if (ECHo.logLevel >= 1) trace("Unexpected error in doAcceptStep 1: " + stringError);
 			}
 		}
 		catch (error : Dynamic)
 		{
-			trace("Unexpected error in doAcceptStep 2: " + error);
+			if (ECHo.logLevel >= 1) trace("Unexpected error in doAcceptStep 2: " + error);
 		}
 	}
 
@@ -165,12 +165,12 @@ class HostConnection extends ConnectionBase
 			case "Blocking":
 				// Expected
 			default:
-				trace("Unexpected error in doSendStep 1: " + stringError);
+				if (ECHo.logLevel >= 1) trace("Unexpected error in doSendStep 1: " + stringError);
 			}
 		}
 		catch (error : Dynamic)
 		{
-			trace("Unexpected error in doSendStep 2: " + error);
+			if (ECHo.logLevel >= 1) trace("Unexpected error in doSendStep 2: " + error);
 		}
 	}
 
@@ -196,7 +196,7 @@ class HostConnection extends ConnectionBase
 			case "Blocking":
 				// Expected
 			default:
-				trace("Unexpected error in doListenStep 1: " + stringError);
+				if (ECHo.logLevel >= 1) trace("Unexpected error in doListenStep 1: " + stringError);
 			}
 		}
 		catch (error : Dynamic)
@@ -209,12 +209,12 @@ class HostConnection extends ConnectionBase
 				}
 				else
 				{
-					trace("Unexpected error in host doListenStep 2: " + error);
+					if (ECHo.logLevel >= 1) trace("Unexpected error in host doListenStep 2: " + error);
 				}
 			}
 			else
 			{
-				trace("Unexpected error in host doListenStep 3: " + error);
+				if (ECHo.logLevel >= 1) trace("Unexpected error in host doListenStep 3: " + error);
 			}
 		}
 	}

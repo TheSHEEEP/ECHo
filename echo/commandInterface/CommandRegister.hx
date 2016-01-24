@@ -116,16 +116,20 @@ class CommandRegister
 			}
 		);
 
-		// Apply the IDs to the command names, and store id -> class
+		// Apply the IDs to the command and the commands, and store id -> class
 		var offset : Int = p_predefined ? 0 : 300;
 		for (i in 0 ... nameArray.length)
 		{
 			_commandNameToId.set(nameArray[i], i + offset);
 
 			// Store ID -> class
-			var name : String = _commandNameToClassName.get(nameArray[i]);
+			var nameInArray : String = nameArray[i];
+			var name : String = p_namesAndClassNames.get(nameInArray);
 			var theClass : Class<Dynamic>= Type.resolveClass(name);
 			_idToClass.set(i + offset, theClass);
+
+			// Store ID in static class member
+			Reflect.callMethod(theClass, Reflect.field(theClass, "setId"), [i + offset]);
 		}
 	}
 

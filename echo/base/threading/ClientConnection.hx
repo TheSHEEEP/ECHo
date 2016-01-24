@@ -4,6 +4,7 @@ import sys.net.Socket;
 import sys.net.Host;
 import haxe.Timer;
 import haxe.io.Error;
+import haxe.CallStack;
 import echo.base.data.ExtendedClientData;
 
 /**
@@ -97,7 +98,7 @@ class ClientConnection extends ConnectionBase
 			_mainSocket.setBlocking(false);
 			_isConnected = true;
 
-			trace("Successfully connected to host.");
+			if (ECHo.logLevel >= 5) trace("Successfully established socket connection to host.");
 		}
 		catch (stringError : String)
 		{
@@ -106,12 +107,12 @@ class ClientConnection extends ConnectionBase
 			case "Blocking":
 				// Expected
 			default:
-				trace("Unexpected error in doHostConnection 1: " + stringError + ".");
+				if (ECHo.logLevel >= 1) trace("Unexpected error in doHostConnection 1: " + stringError + ".");
 			}
 		}
 		catch (error : Dynamic)
 		{
-			trace("Unexpected error in doHostConnection 2: " + error);
+			if (ECHo.logLevel >= 1) trace("Unexpected error in doHostConnection 2: " + error);
 		}
 	}
 
@@ -133,12 +134,26 @@ class ClientConnection extends ConnectionBase
 			case "Blocking":
 				// Expected
 			default:
-				trace("Unexpected error in doSendStep 1: " + stringError + ".");
+				if (ECHo.logLevel >= 1) trace("Unexpected error in client in doSendStep 1: " + stringError + ".");
 			}
 		}
 		catch (error : Dynamic)
 		{
-			trace("Unexpected error in doSendStep 2: " + error);
+			if (Std.is(error, Error))
+			{
+				if (cast(error, Error).equals(Blocked))
+				{
+					// Expected
+				}
+				else
+				{
+					if (ECHo.logLevel >= 1) trace("Unexpected error in client doSendStep 2: " + error);
+				}
+			}
+			else
+			{
+				if (ECHo.logLevel >= 1) trace("Unexpected error in client doSendStep 3: " + error);
+			}
 		}
 	}
 
@@ -161,7 +176,7 @@ class ClientConnection extends ConnectionBase
 			case "Blocking":
 				// Expected
 			default:
-				trace("Unexpected error in doListenStep 1: " + stringError + ".");
+				if (ECHo.logLevel >= 1) trace("Unexpected error in doListenStep 1: " + stringError + ".");
 			}
 		}
 		catch (error : Dynamic)
@@ -174,12 +189,14 @@ class ClientConnection extends ConnectionBase
 				}
 				else
 				{
-					trace("Unexpected error in client doListenStep 2: " + error);
+					if (ECHo.logLevel >= 1) trace("Unexpected error in client doListenStep 2: " + error);
 				}
 			}
 			else
 			{
-				trace("Unexpected error in client doListenStep 3: " + error);
+				if (ECHo.logLevel >= 1) trace("Unexpected error in client doListenStep 3: " + error);
+				trace(CallStack.exceptionStack());
+
 			}
 		}
 	}

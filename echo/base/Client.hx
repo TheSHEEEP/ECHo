@@ -4,6 +4,9 @@ import cpp.vm.Thread;
 import cpp.vm.Mutex;
 import echo.base.threading.ClientConnection;
 import echo.base.data.ClientData;
+import echo.commandInterface.commands.InviteClient;
+import echo.commandInterface.commands.RejectConnection;
+import echo.commandInterface.Command;
 
 /**
  * Client class.
@@ -17,6 +20,8 @@ class Client extends ClientHostBase
 
 	private var _clientData : ClientData = new ClientData();
 
+	private var _isConnected : Bool = false;
+
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.
@@ -29,10 +34,13 @@ class Client extends ClientHostBase
 		super();
 
 		_clientData.identifier = p_identifier;
-		
+
 		_clientConnection = new ClientConnection(p_hostAddr, p_port);
 		_clientConnection.setSharedData(_inCommands, _inCommandsMutex, _outCommands, _outCommandsMutex);
 		_clientThread = Thread.create(_clientConnection.threadFunc);
+
+		// Add callbacks for base ECHo functionality
+		addCommandCallback(InviteClient.getId(), executeClientCommand);
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -43,7 +51,7 @@ class Client extends ClientHostBase
 	 */
 	public function isConnected() : Bool
 	{
-		return _clientConnection.isConnected();
+		return _isConnected;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -64,5 +72,34 @@ class Client extends ClientHostBase
 	override public function update() : Void
 	{
 		super.update();
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Executes the passed command.
+	 * @param  {Command} p_command The command to execute.
+	 * @return {Bool}
+	 */
+	public function executeClientCommand(p_command : Command) : Bool
+	{
+		var id : Int = p_command.getCommandId();
+		if (id == InviteClient.getId())
+		{
+			trace("Received InviteClient!");
+			_isConnected = true;
+
+			// TODO: here
+		}
+		else
+		{
+			if (ECHo.logLevel >= 2)
+			{
+				trace("Warning: executeClientCommand: Unhandled client command: " + p_command.getCommandId());
+			}
+			p_command.errorMsg = "Unhandled client command";
+			return false;
+		}
+
+		return true;
 	}
 }
