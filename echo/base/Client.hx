@@ -7,6 +7,17 @@ import echo.base.data.ClientData;
 import echo.commandInterface.commands.InviteClient;
 import echo.commandInterface.commands.RejectConnection;
 import echo.commandInterface.Command;
+import echo.util.ConditionalTimer;
+
+/**
+ * The state the client can be in.
+ * @type {[type]}
+ */
+enum ClientState
+{
+	None;
+	WaitForInvite;
+}
 
 /**
  * Client class.
@@ -15,12 +26,10 @@ import echo.commandInterface.Command;
  */
 class Client extends ClientHostBase
 {
-	private var _clientConnection	: ClientConnection;
-	private var _clientThread		: Thread;
-
 	private var _clientData : ClientData = new ClientData();
 
 	private var _isConnected : Bool = false;
+	private var _state : ClientState = None;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -35,9 +44,9 @@ class Client extends ClientHostBase
 
 		_clientData.identifier = p_identifier;
 
-		_clientConnection = new ClientConnection(p_hostAddr, p_port);
-		_clientConnection.setSharedData(_inCommands, _inCommandsMutex, _outCommands, _outCommandsMutex);
-		_clientThread = Thread.create(_clientConnection.threadFunc);
+		_connection = new ClientConnection(p_hostAddr, p_port);
+		_connection.setSharedData(_inCommands, _inCommandsMutex, _outCommands, _outCommandsMutex);
+		_thread = Thread.create(_connection.threadFunc);
 
 		// Add callbacks for base ECHo functionality
 		addCommandCallback(InviteClient.getId(), executeClientCommand);
@@ -67,11 +76,24 @@ class Client extends ClientHostBase
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Updates the client, executing commands (aka calling their callbacks).
+	 * @param  {Float}  p_timeSinceLastFrame	The time since the last frame in seconds.
 	 * @return {Void}
 	 */
-	override public function update() : Void
+	override public function update(p_timeSinceLastFrame : Float) : Void
 	{
-		super.update();
+		super.update(p_timeSinceLastFrame);
+
+		// If we have a socket connection, but no full Host->Client connection, set a timer
+		if (cast(_connection, ClientConnection).isConnected() && !_isConnected && _state == None)
+		{
+			_state = WaitForInvite;
+			var timer : ConditionalTimer = new ConditionalTimer(1.5,
+				isConnected,
+				null,
+				_connection.shutdown
+			);
+			_conditionalTimers.push(timer);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

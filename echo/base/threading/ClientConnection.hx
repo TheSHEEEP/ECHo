@@ -6,6 +6,7 @@ import haxe.Timer;
 import haxe.io.Error;
 import haxe.CallStack;
 import echo.base.data.ExtendedClientData;
+import echo.util.TryCatchMacros;
 
 /**
  * The class doing all of the client's socket interaction.
@@ -65,14 +66,23 @@ class ClientConnection extends ConnectionBase
 			// Connect to the host
 			if (!_isConnected)
 			{
-				doHostConnection();
+				TryCatchMacros.tryCatchBlockedOk( "client doHostConnection", function() {
+					doHostConnection();
+				},
+				shutdown);
 			}
 
 			// Send to host step
-			doSendStep();
+			TryCatchMacros.tryCatchBlockedOk( "client doSendStep", function() {
+				doSendStep();
+			},
+			shutdown);
 
 			// Receive from host step
-			doListenStep();
+			TryCatchMacros.tryCatchBlockedOk( "client doListenStep", function() {
+				doListenStep();
+			},
+			shutdown);
 
 			// Sleep
 			currentTickTime = Timer.stamp() - startTime;
@@ -81,7 +91,28 @@ class ClientConnection extends ConnectionBase
 			{
 				Sys.sleep(sleepTime);
 			}
+
+			// Shutdown required?
+			if (_doShutdown)
+			{
+				doShutdownInternal();
+				_doShutdown = false;
+				return;
+			}
 		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Shuts down the client connection.
+	 * @return {Void}
+	 */
+	override private function doShutdownInternal() : Void
+	{
+		super.doShutdownInternal();
+		_isConnected = false;
+
+		if (ECHo.logLevel >= 5) trace("Client threaded connection shut down.");
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -91,29 +122,12 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doHostConnection() : Void
 	{
-		try
-		{
-			_mainSocket.setTimeout(1.0);
-			_mainSocket.connect(_mainHost, _port);
-			_mainSocket.setBlocking(false);
-			_isConnected = true;
+		_mainSocket.setTimeout(1.0);
+		_mainSocket.connect(_mainHost, _port);
+		_mainSocket.setBlocking(false);
+		_isConnected = true;
 
-			if (ECHo.logLevel >= 5) trace("Successfully established socket connection to host.");
-		}
-		catch (stringError : String)
-		{
-			switch (stringError)
-			{
-			case "Blocking":
-				// Expected
-			default:
-				if (ECHo.logLevel >= 1) trace("Unexpected error in doHostConnection 1: " + stringError + ".");
-			}
-		}
-		catch (error : Dynamic)
-		{
-			if (ECHo.logLevel >= 1) trace("Unexpected error in doHostConnection 2: " + error);
-		}
+		if (ECHo.logLevel >= 5) trace("Successfully established socket connection to host.");
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -123,38 +137,6 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doSendStep() : Void
 	{
-		try
-		{
-
-		}
-		catch (stringError : String)
-		{
-			switch (stringError)
-			{
-			case "Blocking":
-				// Expected
-			default:
-				if (ECHo.logLevel >= 1) trace("Unexpected error in client in doSendStep 1: " + stringError + ".");
-			}
-		}
-		catch (error : Dynamic)
-		{
-			if (Std.is(error, Error))
-			{
-				if (cast(error, Error).equals(Blocked))
-				{
-					// Expected
-				}
-				else
-				{
-					if (ECHo.logLevel >= 1) trace("Unexpected error in client doSendStep 2: " + error);
-				}
-			}
-			else
-			{
-				if (ECHo.logLevel >= 1) trace("Unexpected error in client doSendStep 3: " + error);
-			}
-		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -164,40 +146,7 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doListenStep() : Void
 	{
-		try
-		{
-			// Try to receive as many commands as possible
-			receiveCommands(_hostData);
-		}
-		catch (stringError : String)
-		{
-			switch (stringError)
-			{
-			case "Blocking":
-				// Expected
-			default:
-				if (ECHo.logLevel >= 1) trace("Unexpected error in doListenStep 1: " + stringError + ".");
-			}
-		}
-		catch (error : Dynamic)
-		{
-			if (Std.is(error, Error))
-			{
-				if (cast(error, Error).equals(Blocked))
-				{
-					// Expected
-				}
-				else
-				{
-					if (ECHo.logLevel >= 1) trace("Unexpected error in client doListenStep 2: " + error);
-				}
-			}
-			else
-			{
-				if (ECHo.logLevel >= 1) trace("Unexpected error in client doListenStep 3: " + error);
-				trace(CallStack.exceptionStack());
-
-			}
-		}
+		// Try to receive as many commands as possible
+		receiveCommands(_hostData);
 	}
 }

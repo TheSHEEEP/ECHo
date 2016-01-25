@@ -24,16 +24,18 @@ class Host extends ClientHostBase
 
         // Create the host thread
         _connection = new HostConnection(p_inaddr, p_port, p_maxConn);
+		_connection.setSharedData(_inCommands, _inCommandsMutex, _outCommands, _outCommandsMutex);
         _thread = Thread.create(_connection.threadFunc);
     }
 
     //------------------------------------------------------------------------------------------------------------------
     /**
      * Updates the host, executing commands (aka calling their callbacks).
+	 * @param  {Float}  p_timeSinceLastFrame	The time since the last frame in seconds.
      * @return {Void}
      */
-    override public function update() : Void
+    override public function update(p_timeSinceLastFrame : Float) : Void
     {
-		super.update();
+		super.update(p_timeSinceLastFrame);
     }
 }

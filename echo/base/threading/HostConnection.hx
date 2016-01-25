@@ -10,6 +10,7 @@ import echo.commandInterface.commands.RejectConnection;
 import echo.commandInterface.commands.InviteClient;
 import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
+import echo.util.TryCatchMacros;
 
 /**
  * The class doing all of the host's socket interaction.
@@ -66,13 +67,22 @@ class HostConnection extends ConnectionBase
 			_mainSocket.setBlocking(false);
 
 			// Accepting step
-			doAcceptStep();
+			TryCatchMacros.tryCatchBlockedOk( "host doAcceptStep", function() {
+				doAcceptStep();
+			},
+		    shutdown);
 
 			// Sending to clients step
-			doSendStep();
+			TryCatchMacros.tryCatchBlockedOk( "host doSendStep", function() {
+				doSendStep();
+			},
+		    shutdown);
 
 			// Listening to clients step
-			doListenStep();
+			TryCatchMacros.tryCatchBlockedOk( "host doListenStep", function() {
+				doListenStep();
+			},
+		    shutdown);
 
 			// Sleep
 			currentTickTime = Timer.stamp() - startTime;
@@ -81,7 +91,39 @@ class HostConnection extends ConnectionBase
 			{
 				Sys.sleep(sleepTime);
 			}
+
+			// Shutdown required?
+			if (_doShutdown)
+			{
+				doShutdownInternal();
+				_doShutdown = false;
+				return;
+			}
 		}
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Shuts down the host connection.
+	 * @return {Void}
+	 */
+	override private function doShutdownInternal() : Void
+	{
+		super.doShutdownInternal();
+
+		// Close all client and candidate connections
+		for (candidate in _connectionCandidates)
+		{
+			candidate.socket.close();
+		}
+		_connectionCandidates.splice(0, _connectionCandidates.length);
+		for (client in _connectedClients)
+		{
+			client.socket.close();
+		}
+		_connectedClients.splice(0, _connectedClients.length);
+
+		if (ECHo.logLevel >= 5) trace("Host threaded connection shut down.");
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -91,50 +133,37 @@ class HostConnection extends ConnectionBase
 	 */
 	private function doAcceptStep() : Void
 	{
-		try
+		// Accept an incoming connection
+		var connectedClient : Socket = _mainSocket.accept();
+		connectedClient.setFastSend(true);
+		connectedClient.setBlocking(false);
+		var data : ExtendedClientData = new ExtendedClientData();
+		data.ip = connectedClient.peer().host.toString();
+		data.socket = connectedClient;
+
+		if (ECHo.logLevel >= 5) trace("Incoming connection from " + connectedClient.peer().host.toString()
+									+ " on port " + connectedClient.peer().port);
+
+		// If we have too many clients already connected, send the reject message and close
+		if (_connectedClients.length >= _maxConn)
 		{
-			// Accept an incoming connection
-			var connectedClient : Socket = _mainSocket.accept();
-			connectedClient.setFastSend(true);
-			connectedClient.setBlocking(false);
-			var data : ExtendedClientData = new ExtendedClientData();
-			data.ip = connectedClient.peer().host.toString();
-			data.socket = connectedClient;
-
-			if (ECHo.logLevel >= 5) trace("Incoming connection from " + connectedClient.peer().host.toString()
-										+ " on port " + connectedClient.peer().port);
-
-			// If we have too many clients already connected, send the reject message and close
-			if (_connectedClients.length >= _maxConn)
-			{
-				var command : RejectConnection = new RejectConnection();
-				command.reason = RejectionReason.RoomIsFull;
-				sendCommand(command, data, true);
-				connectedClient.close();
-			}
-			else
-			{
-				// Add this one to the candidates
-				_connectionCandidates.push(data);
-
-				// Send invitation message
-				var command : InviteClient = new InviteClient();
-				sendCommand(command, data);
-			}
+			var command : RejectConnection = new RejectConnection();
+			command.reason = RejectionReason.RoomIsFull;
+			sendCommand(command, data, true);
+			connectedClient.close();
 		}
-		catch (stringError : String)
+		else
 		{
-			switch (stringError)
-			{
-			case "Blocking":
-				// Expected
-			default:
-				if (ECHo.logLevel >= 1) trace("Unexpected error in doAcceptStep 1: " + stringError);
-			}
-		}
-		catch (error : Dynamic)
-		{
-			if (ECHo.logLevel >= 1) trace("Unexpected error in doAcceptStep 2: " + error);
+			// Add this one to the candidates
+			_connectionCandidates.push(data);
+
+			// Test
+			trace("Host is sleeping now...");
+			Sys.sleep(3.0);
+
+			// Send invitation message
+			var command : InviteClient = new InviteClient();
+			sendCommand(command, data);
 		}
 	}
 
@@ -145,33 +174,20 @@ class HostConnection extends ConnectionBase
 	 */
 	private function doSendStep() : Void
 	{
-		try
+		// Send to candidates first
+		for (candidate in _connectionCandidates)
 		{
-			// Send to candidates first
-			for (candidate in _connectionCandidates)
-			{
-				// Send commands
+			// Send commands
 
-				// Send leftover bytes
+			// Send leftover bytes
+			TryCatchMacros.tryCatchBlockedOk("host client candidate sending", function() {
 				sendLeftoverBytes(candidate);
-			}
+				},
+				_connectionCandidates.remove.bind(candidate)
+		 	);
+		}
 
-			// Send to clients
-		}
-		catch (stringError : String)
-		{
-			switch (stringError)
-			{
-			case "Blocking":
-				// Expected
-			default:
-				if (ECHo.logLevel >= 1) trace("Unexpected error in doSendStep 1: " + stringError);
-			}
-		}
-		catch (error : Dynamic)
-		{
-			if (ECHo.logLevel >= 1) trace("Unexpected error in doSendStep 2: " + error);
-		}
+		// Send to clients
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -181,41 +197,10 @@ class HostConnection extends ConnectionBase
 	 */
 	private function doListenStep() : Void
 	{
-		try
+		// Listen to candidates first
+		for (candidate in _connectionCandidates)
 		{
-			// Listen to candidates first
-			for (candidate in _connectionCandidates)
-			{
 
-			}
-		}
-		catch (stringError : String)
-		{
-			switch (stringError)
-			{
-			case "Blocking":
-				// Expected
-			default:
-				if (ECHo.logLevel >= 1) trace("Unexpected error in doListenStep 1: " + stringError);
-			}
-		}
-		catch (error : Dynamic)
-		{
-			if (Std.is(error, Error))
-			{
-				if (cast(error, Error).equals(Blocked))
-				{
-					// Expected
-				}
-				else
-				{
-					if (ECHo.logLevel >= 1) trace("Unexpected error in host doListenStep 2: " + error);
-				}
-			}
-			else
-			{
-				if (ECHo.logLevel >= 1) trace("Unexpected error in host doListenStep 3: " + error);
-			}
 		}
 	}
 }

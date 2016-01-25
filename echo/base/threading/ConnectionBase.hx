@@ -12,6 +12,7 @@ import echo.commandInterface.CommandFactory;
 import echo.commandInterface.CommandRegister;
 import echo.util.InputBytes;
 import echo.util.OutputBytes;
+import echo.util.TryCatchMacros;
 
 /**
  * Common class for host & client connections.
@@ -25,12 +26,14 @@ class ConnectionBase
 
 	private var _tickTime	: Float = 0.05;
 
-	private var _outCommands		: Array<Command> = null;
+	private var _outCommands		: Array<Command> = new Array<Command>();
 	private var _outCommandsMutex	: Mutex = null;
-	private var _inCommands			: Array<Command> = null;
+	private var _inCommands			: Array<Command> = new Array<Command>();
 	private var _inCommandsMutex	: Mutex = null;
 
 	private var _readBytes : Bytes = null;
+
+	private var _doShutdown : Bool = false;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -53,6 +56,17 @@ class ConnectionBase
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
+	 * Will make sure the connection will be shut down on the next tick.
+	 * @return {Void}
+	 */
+	public inline function shutdown() : Void
+	{
+		// Set the flag so that the shutdown will happen the next tick.
+		_doShutdown = true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
 	 * Set the time a single tick shall take.
 	 * @param  {Float} p_time [description]
 	 * @return {Void}
@@ -62,6 +76,7 @@ class ConnectionBase
 		_tickTime = p_time;
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Sets the data to share between the threaded connection and the host/client class.
 	 * @param  {Array<Command>} p_inCommands       Array for incoming commands.
@@ -87,6 +102,18 @@ class ConnectionBase
 	public function threadFunc() : Void
 	{
 
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Does all shutdown procedures.
+	 * @return {Void}
+	 */
+	private function doShutdownInternal() : Void
+	{
+		_inCommands.splice(0, _inCommands.length);
+		_outCommands.splice(0, _outCommands.length);
+		_mainSocket.close();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -135,7 +162,7 @@ class ConnectionBase
 					trace("Forcing full send command write.");
 				}
 				p_clientData.socket.setBlocking(true);
-				p_clientData.socket.setTimeout(10.0);
+				p_clientData.socket.setTimeout(100.0);
 				p_clientData.socket.output.writeBytes(finalBytes, written, finalBytes.length - written);
 				p_clientData.socket.setBlocking(false);
 				p_clientData.socket.setTimeout(1.0);
@@ -197,38 +224,12 @@ class ConnectionBase
 
 		// Read as much data as possible (this is non-blocking, remember)
 		var toRead : Int = 0;
-		try
-		{
+		TryCatchMacros.tryCatchBlockedOk( "receiveCommands", function() {
 			toRead = socket.input.readBytes(_readBytes, 0, 512);
-		}
-		catch (stringError : String)
-		{
-			switch (stringError)
-			{
-			case "Blocking":
-				// Expected
-			default:
-				if (ECHo.logLevel >= 1) trace("Unexpected error in receiveCommands 1: " + stringError + ".");
-			}
-		}
-		catch (error : Dynamic)
-		{
-			if (Std.is(error, Error))
-			{
-				if (cast(error, Error).equals(Blocked))
-				{
-					// Expected
-				}
-				else
-				{
-					if (ECHo.logLevel >= 1) trace("Unexpected error in receiveCommandsp 2: " + error);
-				}
-			}
-			else
-			{
-				if (ECHo.logLevel >= 1) trace("Unexpected error in receiveCommands 3: " + error);
-			}
-		}
+		},
+		function(){
+			// What should be done here?
+		});
 
 		// Read the input until everything is processes or at least stored
 		var pos : Int = 0;

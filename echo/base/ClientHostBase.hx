@@ -5,6 +5,7 @@ import cpp.vm.Mutex;
 import cpp.vm.Thread;
 import echo.commandInterface.Command;
 import echo.base.threading.ConnectionBase;
+import echo.util.ConditionalTimer;
 
 /**
  * Common interface for Client & Host classes.
@@ -23,6 +24,8 @@ class ClientHostBase
 	private var _preCommandListeners 	: IntMap<Array<Command->Bool>> = new IntMap<Array<Command->Bool>>();
 	private var _commandListeners 		: IntMap<Array<Command->Bool>> = new IntMap<Array<Command->Bool>>();
 	private var _postCommandListeners 	: IntMap<Array<Command->Bool->Void>> = new IntMap<Array<Command->Bool->Void>>();
+
+	private var _conditionalTimers : Array<ConditionalTimer> = new Array<ConditionalTimer>();
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -148,10 +151,24 @@ class ClientHostBase
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Updates the client/host.
+	 * @param  {Float}  p_timeSinceLastFrame	The time since the last frame in seconds.
 	 * @return {Void}
 	 */
-	public function update() : Void
+	public function update(p_timeSinceLastFrame : Float) : Void
 	{
+		// Update timers
+		var i : Int = 0;
+		while(i < _conditionalTimers.length)
+		{
+			_conditionalTimers[i].update(p_timeSinceLastFrame);
+			if (_conditionalTimers[i].isDone())
+			{
+				_conditionalTimers.splice(i, 1);
+				i--;
+			}
+			i++;
+		}
+		
 		// Handle incoming messages
 		handleIncomingMessages();
 	}
