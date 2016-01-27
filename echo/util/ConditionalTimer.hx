@@ -1,7 +1,7 @@
 package echo.util;
 
 /**
- * A timer that will run for a certain time, then call either of two functions if its condition
+ * A timer that will run for a certain time, or until the condition is fulfilled.
  * is met or not met.
  * @type {[type]}
  */
@@ -18,10 +18,10 @@ class ConditionalTimer
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.
-	 * @param  {Float}      p_time      The time after which the condition will be checked.
+	 * @param  {Float}      p_time      The time the timer will run.
 	 * @param  {Void->Bool} p_condition The function that acts as the condition.
 	 * @param  {Void->Void} p_trueFunc  The function to be called in case of a true condition. May be null.
-	 * @param  {Void->Void} p_falseFunc The function to be called in case of a false condition. May be null.
+	 * @param  {Void->Void} p_falseFunc The function to be called in case the time runs out. May be null.
 	 * @return {[type]}
 	 */
     public function new(p_time : Float, p_condition : Void->Bool,
@@ -42,11 +42,13 @@ class ConditionalTimer
 	 */
 	public function update(p_timeSinceLastFrame : Float) : Void
 	{
+		check();
+		
 		_time += p_timeSinceLastFrame;
 
 		if (_time >= _timeToRun)
 		{
-			check();
+			_falseFunc != null ? _falseFunc() : null;
 			_done = true;
 		}
 	}
@@ -68,16 +70,10 @@ class ConditionalTimer
 	 */
 	private function check() : Void
 	{
-		trace("Checking condition");
 		if (_condition())
 		{
-			trace("Condition is true");
 			_trueFunc != null ? _trueFunc() : null;
-		}
-		else
-		{
-			trace("Condition is false");
-			_falseFunc != null ? _falseFunc() : null;
+			_done = true;
 		}
 	}
 }

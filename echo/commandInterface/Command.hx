@@ -1,5 +1,6 @@
 package echo.commandInterface;
 
+import echo.base.data.ExtendedClientData;
 import echo.util.InputBytes;
 import echo.util.OutputBytes;
 
@@ -17,6 +18,8 @@ class Command
 	private var _recipientId	: Int = -1;
 	private var _senderId		: Int = -1;
 	private var _timestamp		: Float = 0.0;
+
+	private var _clientData 	: ExtendedClientData = null;
 
 	public var errorMsg : String = "";
 
@@ -103,6 +106,27 @@ class Command
 	public function getTimestamp() : Float
 	{
 		return _timestamp;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Sets the ClientData this command was received from.
+	 * @param  {ExtendedClientData} p_clientData The ClientData this command was received from.
+	 * @return {Void}
+	 */
+	public inline function setData(p_clientData : ExtendedClientData) : Void
+	{
+		_clientData = p_clientData;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Gets the ClientData this command was received from.
+	 * @return {ClientData}
+	 */
+	public inline function getData() : ExtendedClientData
+	{
+		return _clientData;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

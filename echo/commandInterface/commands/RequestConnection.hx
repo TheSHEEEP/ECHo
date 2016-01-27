@@ -5,13 +5,13 @@ import echo.util.InputBytes;
 import echo.util.OutputBytes;
 
 /**
- * Message sent to a new socket when the host accept's it.
+ * A request to the server to accept this client as a new connection.
  * @type {[type]}
  */
-class InviteClient extends Command
+class RequestConnection extends Command
 {
-	public var hostId 	: Int = -1;
-	public var secret	: Int = -1;
+	public var identifier 	: String = "";
+	public var secret		: Int = -1;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -20,7 +20,7 @@ class InviteClient extends Command
 	 */
     public function new()
     {
-		super("inviteClient");
+		super("rejectConnection");
     }
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ class InviteClient extends Command
 	 */
 	override public function writeCommandData(p_outBuffer :OutputBytes) : Void
 	{
-		p_outBuffer.writeInt32(hostId);
+		p_outBuffer.writeString(identifier);
 		p_outBuffer.writeInt32(secret);
 	}
 
@@ -43,7 +43,7 @@ class InviteClient extends Command
 	 */
 	override public function readCommandData(p_inBuffer :InputBytes) :Void
 	{
-		hostId = p_inBuffer.readInt32();
+		identifier = p_inBuffer.readString(0);
 		secret = p_inBuffer.readInt32();
 	}
 }

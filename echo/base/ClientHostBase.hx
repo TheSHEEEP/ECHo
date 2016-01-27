@@ -1,6 +1,7 @@
 package echo.base;
 
 import haxe.ds.IntMap;
+import haxe.ds.StringMap;
 import cpp.vm.Mutex;
 import cpp.vm.Thread;
 import echo.commandInterface.Command;
@@ -20,12 +21,14 @@ class ClientHostBase
 	private var _outCommandsMutex	: Mutex = new Mutex();
 	private var _inCommands			: Array<Command> = new Array<Command>();
 	private var _inCommandsMutex	: Mutex = new Mutex();
+	private var _internalMutex		: Mutex = new Mutex();
 
 	private var _preCommandListeners 	: IntMap<Array<Command->Bool>> = new IntMap<Array<Command->Bool>>();
 	private var _commandListeners 		: IntMap<Array<Command->Bool>> = new IntMap<Array<Command->Bool>>();
 	private var _postCommandListeners 	: IntMap<Array<Command->Bool->Void>> = new IntMap<Array<Command->Bool->Void>>();
 
-	private var _conditionalTimers : Array<ConditionalTimer> = new Array<ConditionalTimer>();
+	private var _conditionalTimers 	: Array<ConditionalTimer> = new Array<ConditionalTimer>();
+	private var _flags				: StringMap<Dynamic> = new StringMap<Dynamic>();
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -137,6 +140,48 @@ class ClientHostBase
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
+	 * Adds the passed flag.
+	 * @param  {String} p_flag The flag to add.
+	 * @return {Void}
+	 */
+	public function addFlag(p_flag : String) : Void
+	{
+		_internalMutex.acquire();
+		_flags.set(p_flag, false);
+		_internalMutex.release();
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Checks if the passed flag exists.
+	 * @param  {String} p_flag The flag to add.
+	 * @return {Void}
+	 */
+	public function checkFlag(p_flag : String) : Bool
+	{
+		var retVal : Bool = false;
+		_internalMutex.acquire();
+		retVal = _flags.exists(p_flag);
+		_internalMutex.release();
+
+		return retVal;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Removes the passed flag.
+	 * @param  {String} p_flag The flag to remove.
+	 * @return {Void}
+	 */
+	public function removeFlag(p_flag : String) : Void
+	{
+		_internalMutex.acquire();
+		_flags.remove(p_flag);
+		_internalMutex.release();
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
 	 * Will add the passed command to send out as soon as possible.
 	 * @param  {Command} p_command The command to send. Make sure it is set up properly.
 	 * @return {Void}
@@ -150,6 +195,19 @@ class ClientHostBase
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
+	 * Adds the conditional timer.
+	 * @param  {ConditionalTimer} p_timer The timer to add.
+	 * @return {Void}
+	 */
+	public function addConditionalTimer(p_timer : ConditionalTimer) : Void
+	{
+		_internalMutex.acquire();
+		_conditionalTimers.push(p_timer);
+		_internalMutex.release();
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
 	 * Updates the client/host.
 	 * @param  {Float}  p_timeSinceLastFrame	The time since the last frame in seconds.
 	 * @return {Void}
@@ -158,6 +216,7 @@ class ClientHostBase
 	{
 		// Update timers
 		var i : Int = 0;
+		_internalMutex.acquire();
 		while(i < _conditionalTimers.length)
 		{
 			_conditionalTimers[i].update(p_timeSinceLastFrame);
@@ -168,7 +227,8 @@ class ClientHostBase
 			}
 			i++;
 		}
-		
+		_internalMutex.release();
+
 		// Handle incoming messages
 		handleIncomingMessages();
 	}

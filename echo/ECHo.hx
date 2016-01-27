@@ -19,6 +19,7 @@ class ECHo
 	 * 0	- Nothing
 	 * 1	- Errors
 	 * 2 	- Warnings
+	 * 4 	- Important infos
 	 * 5	- Everything
 	 * @type {Int}
 	 */

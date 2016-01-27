@@ -1,7 +1,10 @@
 package echo.base;
 
-import echo.base.threading.HostConnection;
 import cpp.vm.Thread;
+import echo.base.threading.HostConnection;
+import echo.commandInterface.commands.RequestConnection;
+import echo.commandInterface.commands.RejectConnection;
+import echo.commandInterface.Command;
 
 /**
  * Host class.
@@ -10,6 +13,7 @@ import cpp.vm.Thread;
  */
 class Host extends ClientHostBase
 {
+	private var _hostConnection : HostConnection = null;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -23,9 +27,13 @@ class Host extends ClientHostBase
 		super();
 
         // Create the host thread
-        _connection = new HostConnection(p_inaddr, p_port, p_maxConn);
+        _connection = new HostConnection(p_inaddr, p_port, p_maxConn, this);
 		_connection.setSharedData(_inCommands, _inCommandsMutex, _outCommands, _outCommandsMutex);
+		_hostConnection = cast _connection;
         _thread = Thread.create(_connection.threadFunc);
+
+		// Command callbacks
+		addCommandCallback(RequestConnection.getId(), executeHostCommand);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -38,4 +46,65 @@ class Host extends ClientHostBase
     {
 		super.update(p_timeSinceLastFrame);
     }
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Tries executing the passed command.
+	 * @param  {Command} p_command The command to be executed.
+	 * @return {Bool}
+	 */
+	private function executeHostCommand(p_command : Command) : Bool
+	{
+		var id : Int = p_command.getCommandId();
+
+		// Request connection
+		if (id == RequestConnection.getId())
+		{
+			handleRequestConnection(cast(p_command, RequestConnection));
+		}
+		else
+		{
+			if (ECHo.logLevel >= 2)
+			{
+				trace("Warning: executeHostCommand: Unhandled host command: " + p_command.getName());
+			}
+			p_command.errorMsg = "Unhandled client command";
+			return false;
+		}
+
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the RequestConnection command.
+	 * @param  {RequestConnection} p_command The command to handle.
+	 * @return {Void}
+	 */
+	private function handleRequestConnection(p_command : RequestConnection) : Void
+	{
+		// Make sure that this comes from one of the candidates
+		if (!_hostConnection.isACandidateSecret(p_command.secret))
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: handleRequestConnection: Received RequestConnection with wrong secret.");
+			return;
+		}
+
+		// Set the flag as there is a timer waiting for this
+		addFlag("c:" + RequestConnection.getId() + ":" + p_command.secret);
+
+		// Check if the same client is already connected
+		if (_hostConnection.isClientConnected(p_command.getData()))
+		{
+			// Send rejection
+			var command : RejectConnection = new RejectConnection();
+			command.reason = RejectionReason.AlreadyConnected;
+			command.setSenderId(_hostConnection.getId());
+			command.setRecipientId(p_command.getRecipientId());
+			sendCommand(command);
+			return;
+		}
+
+		// TODO: here
+	}
 }

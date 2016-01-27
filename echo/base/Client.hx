@@ -6,6 +6,7 @@ import echo.base.threading.ClientConnection;
 import echo.base.data.ClientData;
 import echo.commandInterface.commands.InviteClient;
 import echo.commandInterface.commands.RejectConnection;
+import echo.commandInterface.commands.RequestConnection;
 import echo.commandInterface.Command;
 import echo.util.ConditionalTimer;
 
@@ -28,8 +29,10 @@ class Client extends ClientHostBase
 {
 	private var _clientData : ClientData = new ClientData();
 
-	private var _isConnected : Bool = false;
-	private var _state : ClientState = None;
+	private var _isConnected 	: Bool = false;
+	private var _state 			: ClientState = None;
+
+	private var _clientConnection : ClientConnection = null;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -44,12 +47,17 @@ class Client extends ClientHostBase
 
 		_clientData.identifier = p_identifier;
 
-		_connection = new ClientConnection(p_hostAddr, p_port);
+		_connection = new ClientConnection(p_hostAddr, p_port, this);
+		_clientConnection = cast _connection;
 		_connection.setSharedData(_inCommands, _inCommandsMutex, _outCommands, _outCommandsMutex);
 		_thread = Thread.create(_connection.threadFunc);
 
 		// Add callbacks for base ECHo functionality
 		addCommandCallback(InviteClient.getId(), executeClientCommand);
+		addCommandCallback(RejectConnection.getId(), executeClientCommand);
+
+		// Randomize hostId to prevent external sources picking a default
+		_clientConnection.getHostData().id = Std.int(Math.random() * 10000);
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -87,7 +95,7 @@ class Client extends ClientHostBase
 		if (cast(_connection, ClientConnection).isConnected() && !_isConnected && _state == None)
 		{
 			_state = WaitForInvite;
-			var timer : ConditionalTimer = new ConditionalTimer(1.5,
+			var timer : ConditionalTimer = new ConditionalTimer(5.0,
 				isConnected,
 				null,
 				_connection.shutdown
@@ -105,23 +113,88 @@ class Client extends ClientHostBase
 	public function executeClientCommand(p_command : Command) : Bool
 	{
 		var id : Int = p_command.getCommandId();
+
+		// Invitation
 		if (id == InviteClient.getId())
 		{
-			trace("Received InviteClient!");
-			_isConnected = true;
-
-			// TODO: here
+			handleInviteClient(cast(p_command, InviteClient));
+		}
+		// Connection rejected
+		else if (id == RejectConnection.getId())
+		{
+			handleRejectConnection(cast(p_command, RejectConnection));
 		}
 		else
 		{
 			if (ECHo.logLevel >= 2)
 			{
-				trace("Warning: executeClientCommand: Unhandled client command: " + p_command.getCommandId());
+				trace("Warning: executeClientCommand: Unhandled client command: " + p_command.getName());
 			}
 			p_command.errorMsg = "Unhandled client command";
 			return false;
 		}
 
 		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the InviteClient command.
+	 * @param  {InviteClient} p_command The command.
+	 * @return {Void}
+	 */
+	private function handleInviteClient(p_command : InviteClient) : Void
+	{
+		// Ignore this when already connected
+		if (_isConnected)
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: handleInviteClient: already connected! Sender was : "
+											+ p_command.getSenderId());
+			return;
+		}
+
+		// Now we know the ID of the host
+		_clientConnection.getHostData().id = p_command.hostId;
+
+		// Send RequestConnection as an answer
+		var command : RequestConnection = new RequestConnection();
+		command.setRecipientId(p_command.hostId);
+		command.identifier = _clientData.identifier;
+		command.secret = p_command.secret;
+		sendCommand(command);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the RejectConnection command.
+	 * @param  {RejectConnection} p_command The command.
+	 * @return {Void}
+	 */
+	private function handleRejectConnection(p_command : RejectConnection) : Void
+	{
+		// Ignore this when not coming from the host
+		if (p_command.getSenderId() != _clientConnection.getHostData().id)
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: handleRejectConnection: sender was not host: "
+											+ p_command.getSenderId());
+			return;
+		}
+		var reason : RejectionReason = cast(p_command, RejectConnection).reason;
+
+		switch(reason)
+		{
+		case RejectionReason.RoomIsFull:
+			_connection.shutdown();
+			_isConnected = false;
+			_state = ClientState.None;
+			if (ECHo.logLevel >= 4) trace("Info: handleRejectConnection: Host rejected connection due to full room.");
+		case RejectionReason.AlreadyConnected:
+			// Nothing
+		default:
+			_connection.shutdown();
+			_isConnected = false;
+			_state = ClientState.None;
+			if (ECHo.logLevel >= 2) trace("Warning: handleRejectConnection: Connection rejected without reason.");
+		}
 	}
 }

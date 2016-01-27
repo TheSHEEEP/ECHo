@@ -7,6 +7,7 @@ import haxe.io.Bytes;
 import haxe.io.BytesBuffer;
 import haxe.io.Error;
 import echo.base.data.ExtendedClientData;
+import echo.base.ClientHostBase;
 import echo.commandInterface.Command;
 import echo.commandInterface.CommandFactory;
 import echo.commandInterface.CommandRegister;
@@ -23,28 +24,30 @@ class ConnectionBase
 	private var _port		: Int = 0;
 	private var _mainHost	: Host = null;
 	private var _mainSocket : Socket = null;
+	private var _id			: Int = -1;
 
 	private var _tickTime	: Float = 0.05;
+	private var _doShutdown : Bool = false;
 
+	private var _parent				: ClientHostBase = null;
 	private var _outCommands		: Array<Command> = new Array<Command>();
 	private var _outCommandsMutex	: Mutex = null;
 	private var _inCommands			: Array<Command> = new Array<Command>();
 	private var _inCommandsMutex	: Mutex = null;
 
 	private var _readBytes : Bytes = null;
-
-	private var _doShutdown : Bool = false;
-
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.
 	 * @param  {String} p_addr The address to use.
 	 * @param  {Int}    p_port The port to use.
+	 * @param  {ClientHostBase} p_parent  The parent of this connection thread.
 	 * @return {[type]}
 	 */
-	public function new(p_addr : String, p_port : Int)
+	public function new(p_addr : String, p_port : Int, p_parent : ClientHostBase)
 	{
 		_port = p_port;
+		_parent = p_parent;
 
 		// Create Socket & Host
 		_mainSocket = new Socket();
@@ -63,6 +66,16 @@ class ConnectionBase
 	{
 		// Set the flag so that the shutdown will happen the next tick.
 		_doShutdown = true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Returns the ID of this client or host.
+	 * @return {Int}
+	 */
+	public inline function getId() : Int
+	{
+		return _id;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -335,6 +348,7 @@ class ConnectionBase
 		if (ECHo.logLevel >= 5) trace("Storing incoming command " + command.getName());
 
 		// Read the data
+		command.setData(p_clientData);
 		command.readBaseData(source);
 		command.readCommandData(source);
 		if (source.position != source.length)
@@ -346,5 +360,14 @@ class ConnectionBase
 
 		// Store it
 		_inCommands.push(command);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Does nothing.
+	 * @return {Void}
+	 */
+	private function doNothing() : Void
+	{
 	}
 }

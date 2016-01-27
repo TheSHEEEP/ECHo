@@ -14,6 +14,7 @@ class ClientData
 	public var isHost 		: Bool = false;
 	public var isAdmin 		: Bool = false;
 	public var ping 		: Int = 100;
+	public var secret		: Int = 0;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**

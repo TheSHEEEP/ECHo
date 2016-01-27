@@ -6,6 +6,7 @@ import haxe.Timer;
 import haxe.io.Error;
 import haxe.CallStack;
 import echo.base.data.ExtendedClientData;
+import echo.commandInterface.Command;
 import echo.util.TryCatchMacros;
 
 /**
@@ -26,11 +27,12 @@ class ClientConnection extends ConnectionBase
 	 * Constructor.
 	 * @param  {String} p_hostAddr The address to connect to.
 	 * @param  {Int}    p_port	   The port to connect at.
+	 * @param  {ClientHostBase} p_parent  The parent of this connection thread.
 	 * @return {[type]}
 	 */
-    public function new(p_hostAddr : String, p_port : Int)
+    public function new(p_hostAddr : String, p_port : Int, p_parent : ClientHostBase)
     {
-		super(p_hostAddr, p_port);
+		super(p_hostAddr, p_port, p_parent);
 
 		// Create the socket
 		_mainSocket.setBlocking(true);
@@ -46,6 +48,16 @@ class ClientConnection extends ConnectionBase
 	public inline function isConnected() : Bool
 	{
 		return _isConnected;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Returns the "client" data of the host.
+	 * @return {ExtendedClientData}
+	 */
+	public inline function getHostData() : ExtendedClientData
+	{
+		return _hostData;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -127,6 +139,9 @@ class ClientConnection extends ConnectionBase
 		_mainSocket.setBlocking(false);
 		_isConnected = true;
 
+		_hostData.ip = _mainSocket.peer().host.toString();
+		_hostData.socket = _mainSocket;
+
 		if (ECHo.logLevel >= 5) trace("Successfully established socket connection to host.");
 	}
 
@@ -137,6 +152,22 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doSendStep() : Void
 	{
+		// Send commands
+		_outCommandsMutex.acquire();
+		var commands : Array<Command> = _outCommands.splice(0, _outCommands.length);
+		_outCommandsMutex.release();
+		for (command in commands)
+		{
+			TryCatchMacros.tryCatchBlockedOk("sending command " + command.getName(),
+				function() {
+					sendCommand(command, _hostData);
+				},
+				doNothing
+			);
+		}
+
+		// Send leftover bytes
+		sendLeftoverBytes(_hostData);
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
