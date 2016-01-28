@@ -1,17 +1,17 @@
 package echo.commandInterface.commands;
 
+import echo.base.data.ClientData;
 import echo.commandInterface.Command;
 import echo.util.InputBytes;
 import echo.util.OutputBytes;
 
 /**
- * A request to the server to accept this client as a new connection.
+ * A list of all clients, sent around by the host.
  * @type {[type]}
  */
-class RequestConnection extends Command
+class ClientList extends Command
 {
-	public var identifier 	: String = "";
-	public var secret		: Int = -1;
+	public var clients	: Array<ClientData> = new Array<ClientData>();
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -20,7 +20,7 @@ class RequestConnection extends Command
 	 */
     public function new()
     {
-		super("requestConnection");
+		super("clientList");
     }
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -31,8 +31,11 @@ class RequestConnection extends Command
 	 */
 	override public function writeCommandData(p_outBuffer :OutputBytes) : Void
 	{
-		p_outBuffer.writeString(identifier);
-		p_outBuffer.writeInt32(secret);
+		p_outBuffer.writeInt32(clients.length);
+		for (client in clients)
+		{
+			client.writeData(p_outBuffer);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -43,7 +46,12 @@ class RequestConnection extends Command
 	 */
 	override public function readCommandData(p_inBuffer :InputBytes) :Void
 	{
-		identifier = p_inBuffer.readString(0);
-		secret = p_inBuffer.readInt32();
+		var length : Int = p_inBuffer.readInt32();
+		for (i in 0 ... length)
+		{
+			var data : ClientData = new ClientData();
+			data.readData(p_inBuffer);
+			clients.push(data);
+		}
 	}
 }

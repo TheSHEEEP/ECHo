@@ -5,13 +5,13 @@ import echo.util.InputBytes;
 import echo.util.OutputBytes;
 
 /**
- * A request to the server to accept this client as a new connection.
+ * Command sent in case the host accepts a new client.
  * @type {[type]}
  */
-class RequestConnection extends Command
+class AcceptConnection extends Command
 {
-	public var identifier 	: String = "";
-	public var secret		: Int = -1;
+	public var clientId 		: Int = -1;
+	public var newIdentifier 	: String = null;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -20,7 +20,7 @@ class RequestConnection extends Command
 	 */
     public function new()
     {
-		super("requestConnection");
+		super("acceptConnection");
     }
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -31,8 +31,11 @@ class RequestConnection extends Command
 	 */
 	override public function writeCommandData(p_outBuffer :OutputBytes) : Void
 	{
-		p_outBuffer.writeString(identifier);
-		p_outBuffer.writeInt32(secret);
+		p_outBuffer.writeInt32(clientId);
+		if (newIdentifier != null)
+		{
+			p_outBuffer.writeString(newIdentifier);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -43,7 +46,10 @@ class RequestConnection extends Command
 	 */
 	override public function readCommandData(p_inBuffer :InputBytes) :Void
 	{
-		identifier = p_inBuffer.readString(0);
-		secret = p_inBuffer.readInt32();
+		clientId = p_inBuffer.readInt32();
+		if (p_inBuffer.position < p_inBuffer.length)
+		{
+			newIdentifier = p_inBuffer.readString(0);
+		}
 	}
 }

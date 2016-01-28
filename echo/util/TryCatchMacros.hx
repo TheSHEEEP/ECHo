@@ -32,7 +32,11 @@ class TryCatchMacros
 				case "Blocking":
 					// Expected
 				default:
-					if (ECHo.logLevel >= 1) trace("Unexpected error in " + $p_name + " 1: " + stringError + ".");
+					if (ECHo.logLevel >= 1)
+					{
+						trace("Unexpected error in " + $p_name + " 1: " + stringError + ".");
+						trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
+					}
 					$p_onError();
 				}
 			}
@@ -46,13 +50,21 @@ class TryCatchMacros
 					}
 					else
 					{
-						if (ECHo.logLevel >= 1) trace("Unexpected error in " + $p_name + " 2: " + error);
+						if (ECHo.logLevel >= 1)
+						{
+							trace("Unexpected error in " + $p_name + " 2: " + error);
+							trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
+						}
 						$p_onError();
 					}
 				}
 				else
 				{
-					if (ECHo.logLevel >= 1) trace("Unexpected error in " + $p_name + " 3: " + error);
+					if (ECHo.logLevel >= 1)
+					{
+						trace("Unexpected error in " + $p_name + " 3: " + error);
+						trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
+					}
 					$p_onError();
 				}
 			}

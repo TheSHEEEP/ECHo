@@ -152,6 +152,16 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doSendStep() : Void
 	{
+		// Send leftover bytes
+		sendLeftoverBytes(_hostData);
+
+		// Keep sending rest bytes until all are sent, only then, send the next command
+		if (_hostData.sendBuffer.length != 0)
+		{
+			if (ECHo.logLevel >= 5) trace('Client: still got bytes to send: ' + _hostData.sendBuffer.length);
+			return;
+		}
+
 		// Send commands
 		_outCommandsMutex.acquire();
 		var commands : Array<Command> = _outCommands.splice(0, _outCommands.length);
@@ -165,9 +175,6 @@ class ClientConnection extends ConnectionBase
 				doNothing
 			);
 		}
-
-		// Send leftover bytes
-		sendLeftoverBytes(_hostData);
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

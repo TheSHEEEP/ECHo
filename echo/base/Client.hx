@@ -7,6 +7,8 @@ import echo.base.data.ClientData;
 import echo.commandInterface.commands.InviteClient;
 import echo.commandInterface.commands.RejectConnection;
 import echo.commandInterface.commands.RequestConnection;
+import echo.commandInterface.commands.AcceptConnection;
+import echo.commandInterface.commands.ClientList;
 import echo.commandInterface.Command;
 import echo.util.ConditionalTimer;
 
@@ -55,6 +57,8 @@ class Client extends ClientHostBase
 		// Add callbacks for base ECHo functionality
 		addCommandCallback(InviteClient.getId(), executeClientCommand);
 		addCommandCallback(RejectConnection.getId(), executeClientCommand);
+		addCommandCallback(AcceptConnection.getId(), executeClientCommand);
+		addCommandCallback(ClientList.getId(), executeClientCommand);
 
 		// Randomize hostId to prevent external sources picking a default
 		_clientConnection.getHostData().id = Std.int(Math.random() * 10000);
@@ -124,6 +128,16 @@ class Client extends ClientHostBase
 		{
 			handleRejectConnection(cast(p_command, RejectConnection));
 		}
+		// Connection accepted
+		else if (id == AcceptConnection.getId())
+		{
+			handleAcceptConnection(cast(p_command, AcceptConnection));
+		}
+		// Client list
+		else if (id == ClientList.getId())
+		{
+			handleClientList(cast(p_command, ClientList));
+		}
 		else
 		{
 			if (ECHo.logLevel >= 2)
@@ -162,6 +176,22 @@ class Client extends ClientHostBase
 		command.identifier = _clientData.identifier;
 		command.secret = p_command.secret;
 		sendCommand(command);
+
+		// Wait for accept or reject command for 5 seconds
+		var timer : ConditionalTimer = new ConditionalTimer(5.0,
+			function() : Bool {
+				return checkFlag("c:" + RejectConnection.getId()) || checkFlag("c:" + AcceptConnection.getId());
+			},
+			function() {
+				removeFlag("c:" + RejectConnection.getId());
+				removeFlag("c:" + AcceptConnection.getId());
+			},
+			function() {
+				removeFlag("c:" + RejectConnection.getId());
+				removeFlag("c:" + AcceptConnection.getId());
+				_connection.shutdown();
+			});
+		addConditionalTimer(timer);
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -190,11 +220,76 @@ class Client extends ClientHostBase
 			if (ECHo.logLevel >= 4) trace("Info: handleRejectConnection: Host rejected connection due to full room.");
 		case RejectionReason.AlreadyConnected:
 			// Nothing
+			if (ECHo.logLevel >= 4) trace("Info: handleRejectConnection: Host rejected connection due to AlreadyConnected.");
 		default:
 			_connection.shutdown();
 			_isConnected = false;
 			_state = ClientState.None;
 			if (ECHo.logLevel >= 2) trace("Warning: handleRejectConnection: Connection rejected without reason.");
 		}
+
+		// Set the flag
+		addFlag("c:" + RejectConnection.getId());
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the AcceptConnection command.
+	 * @param  {AcceptConnection} p_command The command to handle.
+	 * @return {Void}
+	 */
+	private function handleAcceptConnection(p_command : AcceptConnection) : Void
+	{
+		// Ignore this when not coming from the host
+		if (p_command.getSenderId() != _clientConnection.getHostData().id)
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: handleAcceptConnection: sender was not host: "
+											+ p_command.getSenderId());
+			return;
+		}
+
+		// The connection was accepted!
+		if (p_command.newIdentifier != null)
+		{
+			_clientData.identifier = p_command.newIdentifier;
+		}
+		_clientData.id = p_command.clientId;
+
+		// Set the flag
+		addFlag("c:" + AcceptConnection.getId());
+
+		// Wait for client list (aka connection is now established) for 5 seconds
+		var timer : ConditionalTimer = new ConditionalTimer(5.0,
+			isConnected,
+			null,
+			_connection.shutdown);
+		addConditionalTimer(timer);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the ClientList command.
+	 * @param  {ClientList} p_command The command to handle.
+	 * @return {Void}
+	 */
+	private function handleClientList(p_command : ClientList) : Void
+	{
+		// Ignore this when not coming from the host
+		if (p_command.getSenderId() != _clientConnection.getHostData().id)
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: handleClientList: sender was not host: "
+											+ p_command.getSenderId());
+			return;
+		}
+
+		// Just print
+		trace("Got ClientList command:");
+		for (client in p_command.clients)
+		{
+			trace('**********');
+			client.dump();
+		}
+
+		_isConnected = true;
 	}
 }

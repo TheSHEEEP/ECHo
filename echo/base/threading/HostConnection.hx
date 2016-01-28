@@ -4,6 +4,7 @@ import sys.net.Socket;
 import sys.net.Host;
 import haxe.Timer;
 import haxe.io.Error;
+import cpp.vm.Mutex;
 import echo.base.data.ClientData;
 import echo.base.data.ExtendedClientData;
 import echo.commandInterface.Command;
@@ -26,8 +27,9 @@ class HostConnection extends ConnectionBase
 {
 	private var _maxConn	: Int = 0;
 
-	private var _connectionCandidates	: Array<ExtendedClientData> = new Array<ExtendedClientData>();
-	private var _connectedClients 		: Array<ExtendedClientData> = new Array<ExtendedClientData>();
+	private var _connectionCandidates	: Array<ExtendedClientData> = null;
+	private var _connectedClients 		: Array<ExtendedClientData> = null;
+	private var _clientListMutex		: Mutex = null;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -53,6 +55,22 @@ class HostConnection extends ConnectionBase
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
+	 * Set additional shared data for the host.
+	 * @param  {Array<ExtendedClientData>} p_candidates The array of client candidates.
+	 * @param  {Array<ExtendedClientData>} p_clients    The array of connected clients.
+	 * @return {Void}
+	 */
+	public function setHostSharedData(	p_candidates : Array<ExtendedClientData>,
+										p_clients : Array<ExtendedClientData>,
+										p_mutex : Mutex) : Void
+	{
+		_connectionCandidates = p_candidates;
+		_connectedClients = p_clients;
+		_clientListMutex = p_mutex;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
 	 * The main thread function of the host thread.
 	 * @return {Void}
 	 */
@@ -72,6 +90,7 @@ class HostConnection extends ConnectionBase
 			_mainSocket.setBlocking(false);
 
 			// Accepting step
+			_clientListMutex.acquire();
 			TryCatchMacros.tryCatchBlockedOk( "host doAcceptStep", function() {
 				doAcceptStep();
 			},
@@ -88,6 +107,7 @@ class HostConnection extends ConnectionBase
 				doListenStep();
 			},
 		    shutdown);
+			_clientListMutex.release();
 
 			// Sleep
 			currentTickTime = Timer.stamp() - startTime;
@@ -117,6 +137,7 @@ class HostConnection extends ConnectionBase
 		super.doShutdownInternal();
 
 		// Close all client and candidate connections
+		_clientListMutex.acquire();
 		for (candidate in _connectionCandidates)
 		{
 			candidate.socket.close();
@@ -127,6 +148,7 @@ class HostConnection extends ConnectionBase
 			client.socket.close();
 		}
 		_connectedClients.splice(0, _connectedClients.length);
+		_clientListMutex.release();
 
 		if (ECHo.logLevel >= 5) trace("Host threaded connection shut down.");
 	}
@@ -150,7 +172,8 @@ class HostConnection extends ConnectionBase
 									+ " on port " + connectedClient.peer().port);
 
 		// If we have too many clients already connected, send the reject message and close
-		if (_connectedClients.length >= _maxConn)
+		var num : Int = _connectedClients.length;
+		if (num >= _maxConn)
 		{
 			var command : RejectConnection = new RejectConnection();
 			command.reason = RejectionReason.RoomIsFull;
@@ -161,7 +184,7 @@ class HostConnection extends ConnectionBase
 		else
 		{
 			// Add this one to the candidates
-			_connectionCandidates.push(data);
+			cast(_parent, echo.base.Host).addToCandidates(data);
 
 			// Create invitation command
 			var command : InviteClient = new InviteClient();
@@ -176,7 +199,9 @@ class HostConnection extends ConnectionBase
 				_parent.removeFlag.bind("c:" + RequestConnection.getId() + ":" + command.secret),
 				function () {
 					data.socket.close();
+					_clientListMutex.acquire();
 					_connectionCandidates.remove(data);
+					_clientListMutex.release();
 				});
 			_parent.addConditionalTimer(timer);
 
@@ -192,6 +217,10 @@ class HostConnection extends ConnectionBase
 	 */
 	private function doSendStep() : Void
 	{
+		_outCommandsMutex.acquire();
+		var commands : Array<Command> = _outCommands.splice(0, _outCommands.length);
+		_outCommandsMutex.release();
+
 		// Send to candidates first
 		for (candidate in _connectionCandidates)
 		{
@@ -206,33 +235,36 @@ class HostConnection extends ConnectionBase
 					throw "";
 				}
 		 	);
-		}
 
-		// Send to clients
-		_outCommandsMutex.acquire();
-		var commands : Array<Command> = _outCommands.splice(0, _outCommands.length);
-		_outCommandsMutex.release();
-		for (client in _connectedClients)
-		{
-			// Send commands, mind sending only to correct recipient
-			var index : Int = commands.length -1;
-			while (index >= 0)
+			// Keep sending rest bytes until all are sent, only then, send the next command
+			if (candidate.sendBuffer.length != 0)
 			{
-				if (commands[index].getRecipientId() == client.id)
+				if (ECHo.logLevel >= 5) trace('Host: candidate still got bytes to send: ' + candidate.sendBuffer.length);
+				continue;
+			}
+
+			// On the special recipient id, send to candidate
+			for (command in commands)
+			{
+				if (command.getRecipientId() == -1000 && candidate.secret == command.getData().secret)
 				{
 					TryCatchMacros.tryCatchBlockedOk("host->client command sending",
 						function() {
-							sendCommand(commands[index], client);
+							sendCommand(command, candidate);
 						},
 						function() {
-							client.socket.close();
-							_connectedClients.remove(client);
+							candidate.socket.close();
+							_connectionCandidates.remove(candidate);
 							throw "";
 						}
-				 	);
+					);
 				}
 			}
+		}
 
+		// Send to clients
+		for (client in _connectedClients)
+		{
 			// Send leftover bytes
 			TryCatchMacros.tryCatchBlockedOk("host->client leftover sending",
 				function() {
@@ -244,6 +276,32 @@ class HostConnection extends ConnectionBase
 					throw "";
 				}
 		 	);
+
+			// Keep sending rest bytes until all are sent, only then, send the next command
+			if (client.sendBuffer.length != 0)
+			{
+				if (ECHo.logLevel >= 5) trace('Host: client ${client.id} still got bytes to send: ' + client.sendBuffer.length);
+				continue;
+			}
+
+			// Send commands, mind sending only to correct recipient, 0 = to all clients
+			for (command in commands)
+			{
+				if (command.getRecipientId() == client.id ||
+					command.getRecipientId() == 0)
+				{
+					TryCatchMacros.tryCatchBlockedOk("host->client command sending",
+						function() {
+							sendCommand(command, client);
+						},
+						function() {
+							client.socket.close();
+							_connectedClients.remove(client);
+							throw "";
+						}
+				 	);
+				}
+			}
 		}
 	}
 
@@ -257,45 +315,16 @@ class HostConnection extends ConnectionBase
 		// Listen to candidates first
 		for (candidate in _connectionCandidates)
 		{
-
+			// Try to receive as many commands as possible
+			receiveCommands(candidate);
 		}
-	}
 
-	//------------------------------------------------------------------------------------------------------------------
-	/**
-	 * Returns true if the passed secret belongs to a client candidate.
-	 * @param  {Int}  p_secret [description]
-	 * @return {Bool}
-	 */
-	public function isACandidateSecret(p_secret : Int) : Bool
-	{
-		for (candidate in _connectionCandidates)
-		{
-			if (p_secret == candidate.secret)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	//------------------------------------------------------------------------------------------------------------------
-	/**
-	 * Checks if the passed client data is identical to one of the connected clients.
-	 * @param  {ExtendedClientData} p_data The data to check.
-	 * @return {Bool}
-	 */
-	public function isClientConnected(p_data : ExtendedClientData) : Bool
-	{
+		// Listen to clients
 		for (client in _connectedClients)
 		{
-			if (client.socket.peer().host.toString() == p_data.socket.peer().host.toString() &&
-				client.socket.peer().port == p_data.socket.peer().port)
-			{
-				return true;
-			}
+			// Try to receive as many commands as possible
+			receiveCommands(client);
 		}
-		return false;
 	}
 
 }

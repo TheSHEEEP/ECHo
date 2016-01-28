@@ -36,6 +36,7 @@ class ConnectionBase
 	private var _inCommandsMutex	: Mutex = null;
 
 	private var _readBytes : Bytes = null;
+
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Constructor.
@@ -152,8 +153,17 @@ class ConnectionBase
 		finalBuffer.writeInt32(tempBytes.length);
 		finalBuffer.writeBytes(tempBytes, 0, tempBytes.length);
 
-		// Send it
 		var finalBytes : Bytes = finalBuffer.getBytes();
+
+		// If the connection still has remaining bytes to send, just append these new ones to the end
+		if (p_clientData.sendBuffer.length > 0)
+		{
+			p_clientData.sendBuffer.addBytes(finalBytes, 0, finalBytes.length);
+			if (ECHo.logLevel >= 5) trace('sendCommand: still got bytes left to send (${p_clientData.sendBuffer.length}), appending new command to buffer');
+			return;
+		}
+
+		// Send it
 		var written : Int = p_clientData.socket.output.writeBytes(finalBytes, 0, finalBytes.length);
 		if (written < finalBytes.length)
 		{
@@ -279,7 +289,7 @@ class ConnectionBase
 				// Make sure we have at least four bytes, as those tell the size of the entire command
 				if (toRead >= 4)
 				{
-					p_clientData.expectedRestReceive = _readBytes.getInt32(0);
+					p_clientData.expectedRestReceive = _readBytes.getInt32(pos);
 					if (ECHo.logLevel >= 5) trace("Expected command size: " + p_clientData.expectedRestReceive);
 					pos += 4;
 					toRead -= 4;
@@ -293,6 +303,7 @@ class ConnectionBase
 						// Shorten the inBytes
 						pos += p_clientData.expectedRestReceive;
 						toRead -= p_clientData.expectedRestReceive;
+						p_clientData.expectedRestReceive = 0;
 					}
 					// If not, just store in the client data's receive buffer
 					else
@@ -312,7 +323,7 @@ class ConnectionBase
 					}
 				}
 			} // END new command begins
-		} // END while inBytes.length > 0
+		} // END while toRead > 0
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -343,6 +354,7 @@ class ConnectionBase
 		{
 			if (ECHo.logLevel >= 1) trace("Error: storeCommandFromData: Could not store incoming command, "
 											+ "id unknown: " + id);
+			trace(haxe.CallStack.callStack());
 			return;
 		}
 		if (ECHo.logLevel >= 5) trace("Storing incoming command " + command.getName());
@@ -359,7 +371,9 @@ class ConnectionBase
 		}
 
 		// Store it
+		_inCommandsMutex.acquire();
 		_inCommands.push(command);
+		_inCommandsMutex.release();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
