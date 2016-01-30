@@ -271,8 +271,8 @@ class HostConnection extends ConnectionBase
 					sendLeftoverBytes(client);
 				},
 				function() {
-					client.socket.close();
-					_connectedClients.remove(client);
+					removeClient(client);
+					if (ECHo.logLevel >= 4) trace("Connected client removed due to error in connection.");
 					throw "";
 				}
 		 	);
@@ -295,9 +295,8 @@ class HostConnection extends ConnectionBase
 							sendCommand(command, client);
 						},
 						function() {
-							client.socket.close();
-							_connectedClients.remove(client);
-							throw "";
+							removeClient(client);
+							if (ECHo.logLevel >= 4) trace("Connected client removed due to error in connection.");
 						}
 				 	);
 				}
@@ -313,18 +312,46 @@ class HostConnection extends ConnectionBase
 	private function doListenStep() : Void
 	{
 		// Listen to candidates first
-		for (candidate in _connectionCandidates)
+		var index : Int = _connectionCandidates.length - 1;
+		while (index >= 0)
 		{
 			// Try to receive as many commands as possible
-			receiveCommands(candidate);
+			if (!receiveCommands(_connectionCandidates[index]))
+			{
+				_connectionCandidates[index].socket.close();
+				_connectionCandidates.splice(index, 1);
+				if (ECHo.logLevel >= 4) trace("Connection candidate removed due to error in connection.");
+			}
+			index--;
 		}
 
 		// Listen to clients
-		for (client in _connectedClients)
+		var index : Int = _connectedClients.length - 1;
+		while (index >= 0)
 		{
 			// Try to receive as many commands as possible
-			receiveCommands(client);
+			if (!receiveCommands(_connectedClients[index]))
+			{
+				removeClient(_connectedClients[index]);
+				if (ECHo.logLevel >= 4) trace("Connected client removed due to error in connection.");
+			}
+			index--;
 		}
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Will close the socket connection to the passed client and remove it from the list.
+	 * Also notifies the rest of the connected clients that a client has dropped.
+	 * @param  {ExtendedClientData} p_client The client to remove.
+	 * @return {Void}
+	 */
+	private function removeClient(p_client : ExtendedClientData) : Void
+	{
+		p_client.socket.close();
+		_connectedClients.remove(p_client);
+
+		// Send client removed message to notify other clients
+		// TODO: here
+	}
 }

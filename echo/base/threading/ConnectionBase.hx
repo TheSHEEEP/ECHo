@@ -238,21 +238,26 @@ class ConnectionBase
 	//------------------------------------------------------------------------------------------------------------------
 	/**
 	 * Tries to read as many full commands as possible from the passed client data.
+	 * Returns false if there has been an unexpected error in the client socket.
 	 * @param  {ExtendedClientData} p_clientData The client data to use for the connection.
-	 * @return {Void}gel
+	 * @return {Bool}
 	 */
-	private function receiveCommands(p_clientData : ExtendedClientData) : Void
+	private function receiveCommands(p_clientData : ExtendedClientData) : Bool
 	{
 		var socket : Socket = p_clientData.socket;
 
 		// Read as much data as possible (this is non-blocking, remember)
 		var toRead : Int = 0;
+		var readOk : Bool = true;
 		TryCatchMacros.tryCatchBlockedOk( "receiveCommands", function() {
 			toRead = socket.input.readBytes(_readBytes, 0, 512);
 		},
 		function(){
-			// What should be done here?
+			readOk = false;
 		});
+
+		// An error here means that the client socket is likely disconnected / broken
+		if (!readOk) return false;
 
 		// Read the input until everything is processes or at least stored
 		var pos : Int = 0;
@@ -320,10 +325,13 @@ class ConnectionBase
 					if (ECHo.logLevel >= 1)
 					{
 						trace("Error: Not even the first 4 bytes of command could be received. If this ever happens, it must be handled by ECHo. Which it does not currently do...");
+						return false;
 					}
 				}
 			} // END new command begins
 		} // END while toRead > 0
+
+		return true;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

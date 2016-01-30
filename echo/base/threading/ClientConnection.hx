@@ -123,6 +123,7 @@ class ClientConnection extends ConnectionBase
 	{
 		super.doShutdownInternal();
 		_isConnected = false;
+		_mainSocket.close();
 
 		if (ECHo.logLevel >= 5) trace("Client threaded connection shut down.");
 	}
@@ -134,6 +135,8 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doHostConnection() : Void
 	{
+		if (_doShutdown) return;
+
 		_mainSocket.setTimeout(1.0);
 		_mainSocket.connect(_mainHost, _port);
 		_mainSocket.setBlocking(false);
@@ -152,6 +155,8 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doSendStep() : Void
 	{
+		if (_doShutdown) return;
+
 		// Send leftover bytes
 		sendLeftoverBytes(_hostData);
 
@@ -184,7 +189,13 @@ class ClientConnection extends ConnectionBase
 	 */
 	public function doListenStep() : Void
 	{
+		if (_doShutdown) return;
+
 		// Try to receive as many commands as possible
-		receiveCommands(_hostData);
+		if (!receiveCommands(_hostData))
+		{
+			shutdown();
+			if (ECHo.logLevel >= 4) trace("Connection to host closed because of error (disconnect?).");
+		}
 	}
 }
