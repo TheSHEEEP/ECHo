@@ -13,6 +13,7 @@ import echo.commandInterface.commands.RequestConnection;
 import echo.commandInterface.commands.InviteClient;
 import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
+import echo.commandInterface.commands.NotifyDisconnect;
 import echo.util.TryCatchMacros;
 import echo.util.ConditionalTimer;
 
@@ -179,6 +180,7 @@ class HostConnection extends ConnectionBase
 			command.reason = RejectionReason.RoomIsFull;
 			command.setSenderId(_id);
 			sendCommand(command, data, true);
+			trace("Closing connection due to full room.");
 			connectedClient.close();
 		}
 		else
@@ -198,6 +200,7 @@ class HostConnection extends ConnectionBase
 				_parent.checkFlag.bind("c:" + RequestConnection.getId() + ":" + command.secret),
 				_parent.removeFlag.bind("c:" + RequestConnection.getId() + ":" + command.secret),
 				function () {
+					if (ECHo.logLevel >= 5) trace("Closing candidate connection due to no answer to inviteclient.");
 					data.socket.close();
 					_clientListMutex.acquire();
 					_connectionCandidates.remove(data);
@@ -230,6 +233,7 @@ class HostConnection extends ConnectionBase
 					sendLeftoverBytes(candidate);
 				},
 				function() {
+					if (ECHo.logLevel >= 5) trace("Closing candidate connection due host->candidate sending error.");
 					candidate.socket.close();
 					_connectionCandidates.remove(candidate);
 					throw "";
@@ -253,6 +257,7 @@ class HostConnection extends ConnectionBase
 							sendCommand(command, candidate);
 						},
 						function() {
+							if (ECHo.logLevel >= 5) trace("Closing candidate connection due special host->candidate sending error.");
 							candidate.socket.close();
 							_connectionCandidates.remove(candidate);
 							throw "";
@@ -352,6 +357,10 @@ class HostConnection extends ConnectionBase
 		_connectedClients.remove(p_client);
 
 		// Send client removed message to notify other clients
-		// TODO: here
+		var command : NotifyDisconnect = new NotifyDisconnect();
+		command.clientId = p_client.id;
+		command.setSenderId(_id);
+		command.setRecipientId(0);
+		_parent.sendCommand(command);
 	}
 }

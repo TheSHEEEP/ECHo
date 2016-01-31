@@ -8,6 +8,7 @@ import echo.commandInterface.commands.RequestConnection;
 import echo.commandInterface.commands.RejectConnection;
 import echo.commandInterface.commands.AcceptConnection;
 import echo.commandInterface.commands.ClientList;
+import echo.commandInterface.commands.NotifyDisconnect;
 import echo.commandInterface.Command;
 
 /**

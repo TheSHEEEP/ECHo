@@ -33,6 +33,7 @@ class Command
 	{
 		_name = p_name;
 		getId();
+		setTimestampCurrent();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -96,6 +97,16 @@ class Command
 	public function setTimestamp(p_timestamp : Float) : Void
 	{
 		_timestamp = p_timestamp;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Will set the timestamp to the current time.
+	 * @return {Void}
+	 */
+	public function setTimestampCurrent() : Void
+	{
+		_timestamp = haxe.Timer.stamp();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

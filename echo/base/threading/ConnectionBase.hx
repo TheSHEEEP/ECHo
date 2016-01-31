@@ -249,6 +249,7 @@ class ConnectionBase
 		// Read as much data as possible (this is non-blocking, remember)
 		var toRead : Int = 0;
 		var readOk : Bool = true;
+
 		TryCatchMacros.tryCatchBlockedOk( "receiveCommands", function() {
 			toRead = socket.input.readBytes(_readBytes, 0, 512);
 		},

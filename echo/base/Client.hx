@@ -9,6 +9,7 @@ import echo.commandInterface.commands.RejectConnection;
 import echo.commandInterface.commands.RequestConnection;
 import echo.commandInterface.commands.AcceptConnection;
 import echo.commandInterface.commands.ClientList;
+import echo.commandInterface.commands.NotifyDisconnect;
 import echo.commandInterface.Command;
 import echo.util.ConditionalTimer;
 
@@ -59,6 +60,7 @@ class Client extends ClientHostBase
 		addCommandCallback(RejectConnection.getId(), executeClientCommand);
 		addCommandCallback(AcceptConnection.getId(), executeClientCommand);
 		addCommandCallback(ClientList.getId(), executeClientCommand);
+		addCommandCallback(NotifyDisconnect.getId(), executeClientCommand);
 
 		// Randomize hostId to prevent external sources picking a default
 		_clientConnection.getHostData().id = Std.int(Math.random() * 10000);
@@ -119,25 +121,15 @@ class Client extends ClientHostBase
 		var id : Int = p_command.getCommandId();
 
 		// Invitation
-		if (id == InviteClient.getId())
-		{
-			handleInviteClient(cast(p_command, InviteClient));
-		}
+		if (id == InviteClient.getId()) handleInviteClient(cast(p_command, InviteClient));
 		// Connection rejected
-		else if (id == RejectConnection.getId())
-		{
-			handleRejectConnection(cast(p_command, RejectConnection));
-		}
+		else if (id == RejectConnection.getId()) handleRejectConnection(cast(p_command, RejectConnection));
 		// Connection accepted
-		else if (id == AcceptConnection.getId())
-		{
-			handleAcceptConnection(cast(p_command, AcceptConnection));
-		}
+		else if (id == AcceptConnection.getId()) handleAcceptConnection(cast(p_command, AcceptConnection));
 		// Client list
-		else if (id == ClientList.getId())
-		{
-			handleClientList(cast(p_command, ClientList));
-		}
+		else if (id == ClientList.getId()) handleClientList(cast(p_command, ClientList));
+		// Notify client disconnected
+		else if (id == NotifyDisconnect.getId()) handleNotifyDisconnect(cast(p_command, NotifyDisconnect));
 		else
 		{
 			if (ECHo.logLevel >= 2)
@@ -282,14 +274,26 @@ class Client extends ClientHostBase
 			return;
 		}
 
-		// Just print
-		trace("Got ClientList command:");
-		for (client in p_command.clients)
+		_isConnected = true;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the NotifyDisconnect command.
+	 * @param  {NotifyDisconnect} p_command The command to handle.
+	 * @return {Void}
+	 */
+	private function handleNotifyDisconnect(p_command : NotifyDisconnect) : Void
+	{
+		// Ignore this when not coming from the host
+		if (p_command.getSenderId() != _clientConnection.getHostData().id)
 		{
-			trace('**********');
-			client.dump();
+			if (ECHo.logLevel >= 2) trace("Warning: handleNotifyDisconnect: sender was not host: "
+											+ p_command.getSenderId());
+			return;
 		}
 
-		_isConnected = true;
+		// Just print
+		if (ECHo.logLevel >= 4) trace('Client with ID ${p_command.clientId} disconnected.');
 	}
 }
