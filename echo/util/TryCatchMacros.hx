@@ -34,7 +34,7 @@ class TryCatchMacros
 				default:
 					if (ECHo.logLevel >= 1)
 					{
-						trace("Unexpected error in " + $p_name + " 1: " + stringError + ".");
+						trace("Unexpected string error in " + $p_name + " 1: " + stringError + ".");
 						trace("********** Callstack: **********");
 						trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
 						trace("********** Exception stack: **********");

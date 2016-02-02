@@ -165,6 +165,7 @@ class ConnectionBase
 
 		// Send it
 		var written : Int = p_clientData.socket.output.writeBytes(finalBytes, 0, finalBytes.length);
+		if (ECHo.logLevel >= 4) trace('Sent bytes for command ${p_command.getName()}: $written/${finalBytes.length}');
 		if (written < finalBytes.length)
 		{
 			if (ECHo.logLevel >= 5)
@@ -249,88 +250,92 @@ class ConnectionBase
 		// Read as much data as possible (this is non-blocking, remember)
 		var toRead : Int = 0;
 		var readOk : Bool = true;
-
-		TryCatchMacros.tryCatchBlockedOk( "receiveCommands", function() {
-			toRead = socket.input.readBytes(_readBytes, 0, 512);
-		},
-		function(){
-			readOk = false;
-		});
-
-		// An error here means that the client socket is likely disconnected / broken
-		if (!readOk) return false;
-
-		// Read the input until everything is processes or at least stored
-		var pos : Int = 0;
-		while (toRead > 0)
+		var bufferFull : Bool = false;
+		do
 		{
-			// Do we expect some leftover data?
-			if (p_clientData.expectedRestReceive > 0)
+			TryCatchMacros.tryCatchBlockedOk( "receiveCommands", function() {
+				toRead = socket.input.readBytes(_readBytes, 0, 2048);
+				bufferFull = toRead >= 2048 ? true : false;
+			},
+			function(){
+				readOk = false;
+			});
+
+			// An error here means that the client socket is likely disconnected / broken
+			if (!readOk) return false;
+
+			// Read the input until everything is processes or at least stored
+			var pos : Int = 0;
+			while (toRead > 0)
 			{
-				// If the inBytes are enough, we can finish the currently waited for command
-				if (toRead >= p_clientData.expectedRestReceive)
+				// Do we expect some leftover data?
+				if (p_clientData.expectedRestReceive > 0)
 				{
-					p_clientData.recvBuffer.addBytes(_readBytes, pos, p_clientData.expectedRestReceive);
-
-					// Store the command
-					storeCommandFromData(p_clientData, null);
-
-					// Advance position
-					pos += p_clientData.expectedRestReceive;
-					toRead -= p_clientData.expectedRestReceive;
-					p_clientData.expectedRestReceive = 0;
-				}
-				// If the inBytes are not enough, just add them to the receive buffer and continue waiting
-				else
-				{
-					p_clientData.recvBuffer.addBytes(_readBytes, pos, toRead);
-					p_clientData.expectedRestReceive -= toRead;
-					pos += toRead;
-					toRead = 0;
-				}
-			}
-			// If we are not waiting for rest of the data for the current command...
-			else
-			{
-				// Make sure we have at least four bytes, as those tell the size of the entire command
-				if (toRead >= 4)
-				{
-					p_clientData.expectedRestReceive = _readBytes.getInt32(pos);
-					if (ECHo.logLevel >= 5) trace("Expected command size: " + p_clientData.expectedRestReceive);
-					pos += 4;
-					toRead -= 4;
-
-					// Do we even have all the data for the command?
+					// If the inBytes are enough, we can finish the currently waited for command
 					if (toRead >= p_clientData.expectedRestReceive)
 					{
-						// Store it!
-						storeCommandFromData(p_clientData, _readBytes.sub(pos, p_clientData.expectedRestReceive));
+						p_clientData.recvBuffer.addBytes(_readBytes, pos, p_clientData.expectedRestReceive);
 
-						// Shorten the inBytes
+						// Store the command
+						storeCommandFromData(p_clientData, null);
+
+						// Advance position
 						pos += p_clientData.expectedRestReceive;
 						toRead -= p_clientData.expectedRestReceive;
 						p_clientData.expectedRestReceive = 0;
 					}
-					// If not, just store in the client data's receive buffer
+					// If the inBytes are not enough, just add them to the receive buffer and continue waiting
 					else
 					{
-						p_clientData.recvBuffer = new BytesBuffer();
-						p_clientData.recvBuffer.addBytes(_readBytes, 0, toRead);
+						p_clientData.recvBuffer.addBytes(_readBytes, pos, toRead);
 						p_clientData.expectedRestReceive -= toRead;
 						pos += toRead;
 						toRead = 0;
 					}
 				}
+				// If we are not waiting for rest of the data for the current command...
 				else
 				{
-					if (ECHo.logLevel >= 1)
+					// Make sure we have at least four bytes, as those tell the size of the entire command
+					if (toRead >= 4)
 					{
-						trace("Error: Not even the first 4 bytes of command could be received. If this ever happens, it must be handled by ECHo. Which it does not currently do...");
-						return false;
+						p_clientData.expectedRestReceive = _readBytes.getInt32(pos);
+						if (ECHo.logLevel >= 5) trace("Expected command size: " + p_clientData.expectedRestReceive);
+						pos += 4;
+						toRead -= 4;
+
+						// Do we even have all the data for the command?
+						if (toRead >= p_clientData.expectedRestReceive)
+						{
+							// Store it!
+							storeCommandFromData(p_clientData, _readBytes.sub(pos, p_clientData.expectedRestReceive));
+
+							// Shorten the inBytes
+							pos += p_clientData.expectedRestReceive;
+							toRead -= p_clientData.expectedRestReceive;
+							p_clientData.expectedRestReceive = 0;
+						}
+						// If not, just store in the client data's receive buffer
+						else
+						{
+							p_clientData.recvBuffer = new BytesBuffer();
+							p_clientData.recvBuffer.addBytes(_readBytes, pos, toRead);
+							p_clientData.expectedRestReceive -= toRead;
+							pos += toRead;
+							toRead = 0;
+						}
 					}
-				}
-			} // END new command begins
-		} // END while toRead > 0
+					else
+					{
+						if (ECHo.logLevel >= 1)
+						{
+							trace("Error: Not even the first 4 bytes of command could be received. If this ever happens, it must be handled by ECHo. Which it does not currently do...");
+							return false;
+						}
+					}
+				} // END new command begins
+			} // END while toRead > 0
+		} while (bufferFull);
 
 		return true;
 	}
@@ -355,6 +360,7 @@ class ConnectionBase
 			source = new InputBytes(p_clientData.recvBuffer.getBytes());
 		}
 		p_clientData.recvBuffer = new BytesBuffer();
+		trace('Bytes storing: ${source.length}');
 
 		// Get a command instance from the ID
 		var id : Int = source.readInt32();
