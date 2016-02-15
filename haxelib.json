@@ -8,6 +8,6 @@
   "releasenote": "First release.",
   "contributors": ["Jan 'TheSHEEEP' Drabner"],
   "dependencies": {
-    "lime": "2.8.3"
+    "lime": ""
   }
 }

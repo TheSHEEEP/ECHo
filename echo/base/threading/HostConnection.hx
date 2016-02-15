@@ -162,6 +162,7 @@ class HostConnection extends ConnectionBase
 	private function doAcceptStep() : Void
 	{
 		// Accept an incoming connection
+		_mainSocket.setBlocking(false);
 		var connectedClient : Socket = _mainSocket.accept();
 		connectedClient.setFastSend(true);
 		connectedClient.setBlocking(false);
@@ -180,7 +181,7 @@ class HostConnection extends ConnectionBase
 			command.reason = RejectionReason.RoomIsFull;
 			command.setSenderId(_id);
 			sendCommand(command, data, true);
-			trace("Closing connection due to full room.");
+			if (ECHo.logLevel >= 4) trace("Closing connection due to full room.");
 			connectedClient.close();
 		}
 		else

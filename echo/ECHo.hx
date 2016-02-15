@@ -1,5 +1,6 @@
 package echo;
 
+import haxe.Timer;
 import echo.commandInterface.CommandRegister;
 import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
@@ -50,6 +51,9 @@ class ECHo
 		Reflect.callMethod(CommandRegister.getInst(),
 							Reflect.field(CommandRegister.getInst(), "compileCommandIds"),
 							[]);
+
+        // At least Windows requires to call this once for non-bs values
+        Timer.stamp();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

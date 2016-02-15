@@ -163,8 +163,11 @@ class ConnectionBase
 			return;
 		}
 
+		// Set the maximum number of bytes per sending - otherwise it will take a bit too long
+		var toSend : Int = finalBytes.length > 1024 * 256 ? 1024 * 256 : finalBytes.length;
+
 		// Send it
-		var written : Int = p_clientData.socket.output.writeBytes(finalBytes, 0, finalBytes.length);
+		var written : Int = p_clientData.socket.output.writeBytes(finalBytes, 0, toSend);
 		if (ECHo.logLevel >= 4) trace('Sent bytes for command ${p_command.getName()}: $written/${finalBytes.length}');
 		if (written < finalBytes.length)
 		{
@@ -204,6 +207,9 @@ class ConnectionBase
 	 */
 	private function sendLeftoverBytes(p_clientData : ExtendedClientData, p_forceFullSend : Bool = false) : Void
 	{
+		// Nothing to do? Quit
+		if (p_clientData.sendBuffer.length > 0) return;
+		
 		// Send the buffer
 		var bytes : Bytes = p_clientData.sendBuffer.getBytes();
 		p_clientData.sendBuffer = new BytesBuffer();
