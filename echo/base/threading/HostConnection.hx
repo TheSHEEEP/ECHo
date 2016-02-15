@@ -162,7 +162,6 @@ class HostConnection extends ConnectionBase
 	private function doAcceptStep() : Void
 	{
 		// Accept an incoming connection
-		_mainSocket.setBlocking(false);
 		var connectedClient : Socket = _mainSocket.accept();
 		connectedClient.setFastSend(true);
 		connectedClient.setBlocking(false);

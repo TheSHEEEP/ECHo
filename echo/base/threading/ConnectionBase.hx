@@ -208,8 +208,8 @@ class ConnectionBase
 	private function sendLeftoverBytes(p_clientData : ExtendedClientData, p_forceFullSend : Bool = false) : Void
 	{
 		// Nothing to do? Quit
-		if (p_clientData.sendBuffer.length > 0) return;
-		
+		if (p_clientData.sendBuffer.length == 0) return;
+
 		// Send the buffer
 		var bytes : Bytes = p_clientData.sendBuffer.getBytes();
 		p_clientData.sendBuffer = new BytesBuffer();
