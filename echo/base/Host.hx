@@ -2,6 +2,7 @@ package echo.base;
 
 import cpp.vm.Mutex;
 import cpp.vm.Thread;
+import haxe.Timer;
 import echo.base.threading.HostConnection;
 import echo.base.data.ExtendedClientData;
 import echo.commandInterface.commands.RequestConnection;
@@ -9,6 +10,8 @@ import echo.commandInterface.commands.RejectConnection;
 import echo.commandInterface.commands.AcceptConnection;
 import echo.commandInterface.commands.ClientList;
 import echo.commandInterface.commands.NotifyDisconnect;
+import echo.commandInterface.commands.Ping;
+import echo.commandInterface.commands.Pong;
 import echo.commandInterface.Command;
 
 /**
@@ -25,7 +28,10 @@ class Host extends ClientHostBase
 	private var _clientListMutex 		: Mutex = new Mutex();
 
 	private var _maxConn 				: Int = 0;
-	private var _idCounter				: Int = 1; //< Has to start at 1 as is the "everyone" id
+	private var _idCounter				: Int = 1; //< Has to start at 1 as 0 is the "everyone" id
+
+	private var _pingTime 		: Float = 1.0;
+	private var _pingListTime 	: Float = 2.0;
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -48,6 +54,7 @@ class Host extends ClientHostBase
 
 		// Command callbacks
 		addCommandCallback(RequestConnection.getId(), executeHostCommand);
+		addCommandCallback(Pong.getId(), executeHostCommand);
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -59,7 +66,54 @@ class Host extends ClientHostBase
     override public function update(p_timeSinceLastFrame : Float) : Void
     {
 		super.update(p_timeSinceLastFrame);
+
+		// Check if a client disconnected, if so, send the client list to the remaining ones
+		if (checkFlag("clientDisconnected"))
+		{
+			removeFlag("clientDisconnected");
+
+			_clientListMutex.acquire();
+			sendClientList();
+			_clientListMutex.release();
+		}
+
+		// Do the ping calculations
+		doPingCalculations(p_timeSinceLastFrame);
     }
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Does the ping calculations for all connected clients and regularly sends pingList commands.
+	 * @param  {Float}  p_timeSinceLastFrame	The time since the last frame in seconds.
+	 * @return {Void}
+	 */
+	private function doPingCalculations(p_timeSinceLastFrame : Float) : Void
+	{
+		// Send the ping command to all clients every 2 seconds
+		_pingTime -= p_timeSinceLastFrame;
+		if (_pingTime <= 0.0)
+		{
+			_pingTime = 1.0;
+
+			var command : Ping = new Ping();
+			command.setSenderId(_hostConnection.getId());
+			command.setRecipientId(0);
+			sendCommand(command);
+		}
+
+		// Send the ping list every two seconds
+		_pingListTime -= p_timeSinceLastFrame;
+		if (_pingListTime <= 0.0)
+		{
+			_pingListTime = 2.0;
+
+			// TODO: here
+			// var command : PingList = new PingList();
+			// command.setSenderId(_hostConnection.getId());
+			// command.setRecipientId(0);
+			// sendCommand(command);
+		}
+	}
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
@@ -75,6 +129,10 @@ class Host extends ClientHostBase
 		if (id == RequestConnection.getId())
 		{
 			handleRequestConnection(cast(p_command, RequestConnection));
+		}
+		else if (id == Pong.getId())
+		{
+			handlePong(cast(p_command, Pong));
 		}
 		else
 		{
@@ -135,7 +193,7 @@ class Host extends ClientHostBase
 		}
 
 		// Check if there is another connected client with the same identifier
-		var count : Int = 0;
+		var count : Int = 1;
 		var found : Bool = true;
 		var identifier = p_command.identifier;
 		while (found)
@@ -174,6 +232,34 @@ class Host extends ClientHostBase
 		sendCommand(command);
 
 		// Create and send the clientList command
+		sendClientList();
+
+		_clientListMutex.release();
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles an incoming pong from a client.
+	 * @param  {Pong} p_command The command data sent.
+	 * @return {Void}
+	 */
+	private function handlePong(p_command : Pong) : Void
+	{
+		// Get the total time it took to receive this pong
+		var totalTime : Float = Timer.stamp() - p_command.pingTimestamp;
+
+		// Take note of the time in the correct client's variable
+		var client : ExtendedClientData = p_command.getData();
+		client.ping = Std.int(totalTime * 1000.0);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Sends the current client list to all clients.
+	 * @return {Void}
+	 */
+	private function sendClientList() : Void
+	{
 		var listCommand : ClientList = new ClientList();
 		for (client in _connectedClients)
 		{
@@ -182,8 +268,6 @@ class Host extends ClientHostBase
 		listCommand.setSenderId(_hostConnection.getId());
 		listCommand.setRecipientId(0);
 		sendCommand(listCommand);
-
-		_clientListMutex.release();
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

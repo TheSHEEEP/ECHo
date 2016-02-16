@@ -362,5 +362,7 @@ class HostConnection extends ConnectionBase
 		command.setSenderId(_id);
 		command.setRecipientId(0);
 		_parent.sendCommand(command);
+
+		_parent.addFlag("clientDisconnected");
 	}
 }

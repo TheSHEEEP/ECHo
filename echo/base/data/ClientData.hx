@@ -3,6 +3,7 @@ package echo.base.data;
 import sys.net.Socket;
 import echo.util.InputBytes;
 import echo.util.OutputBytes;
+import echo.util.RingBuffer;
 
 /**
  * The data belonging to a single client.
@@ -15,6 +16,7 @@ class ClientData
 	public var identifier 	: String = "";
 	public var isHost 		: Bool = false;
 	public var ping 		: Int = 100;
+	public var lastPings	: RingBuffer<Int> = new RingBuffer<Int>(5, 150);
 
 	// This is only known to the host and the actual client itself, not sent around
 	// 		- in the "clientList" command, for example
