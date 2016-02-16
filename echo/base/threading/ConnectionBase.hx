@@ -28,6 +28,7 @@ class ConnectionBase
 
 	private var _tickTime	: Float = 0.05;
 	private var _doShutdown : Bool = false;
+	private var _chunkSize 	: Int = 128;
 
 	private var _parent				: ClientHostBase = null;
 	private var _outCommands		: Array<Command> = new Array<Command>();
@@ -110,6 +111,17 @@ class ConnectionBase
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
+	 * Sets the maximum size of the chunks to send. If bigger than this size, commands will be sent in chunks of bytes.
+	 * @param  {Int}  p_size The size. In kB!
+	 * @return {Void}
+	 */
+	public inline function setChunkSize(p_size : Int) : Void
+	{
+		_chunkSize = p_size;
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
 	 * Main thread function.
 	 * @return {Void}
 	 */
@@ -164,7 +176,7 @@ class ConnectionBase
 		}
 
 		// Set the maximum number of bytes per sending - otherwise it will take a bit too long
-		var toSend : Int = finalBytes.length > 1024 * 256 ? 1024 * 256 : finalBytes.length;
+		var toSend : Int = finalBytes.length > 1024 * _chunkSize ? 1024 * _chunkSize : finalBytes.length;
 
 		// Send it
 		var written : Int = p_clientData.socket.output.writeBytes(finalBytes, 0, toSend);
@@ -210,10 +222,15 @@ class ConnectionBase
 		// Nothing to do? Quit
 		if (p_clientData.sendBuffer.length == 0) return;
 
-		// Send the buffer
+		// Set the maximum number of bytes per sending - otherwise it will take a bit too long
+		var toSend : Int = p_clientData.sendBuffer.length > 1024 * _chunkSize ? 1024 * _chunkSize : p_clientData.sendBuffer.length;
+
+		// Get the bytes and add the rest to the buffer if required
 		var bytes : Bytes = p_clientData.sendBuffer.getBytes();
 		p_clientData.sendBuffer = new BytesBuffer();
-		var written : Int = p_clientData.socket.output.writeBytes(bytes, 0, bytes.length);
+
+		// Send the buffer
+		var written : Int = p_clientData.socket.output.writeBytes(bytes, 0, toSend);
 		if (written < bytes.length)
 		{
 			if (ECHo.logLevel >= 5)

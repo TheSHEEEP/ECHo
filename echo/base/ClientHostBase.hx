@@ -41,6 +41,17 @@ class ClientHostBase
 
 	//------------------------------------------------------------------------------------------------------------------
 	/**
+	 * Sets the maximum size of the chunks to send. If bigger than this size, commands will be sent in chunks of bytes.
+	 * @param  {Int}  p_size The size. In kB!
+	 * @return {Void}
+	 */
+	public inline function setChunkSize(p_size : Int) : Void
+	{
+		_connection.setChunkSize(p_size);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
 	 * Adds a callback function to be called before the execution of the command.
 	 * @param  {Int}		   p_id	  The ID of the command.
 	 * @param  {Command->Bool} p_func The function to be used as a callback.
