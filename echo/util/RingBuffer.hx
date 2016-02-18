@@ -1,13 +1,44 @@
 package echo.util;
 
+
+//------------------------------------------------------------------------------------------------------------------
+@:forward
+@:access(RingBufferImpl)
+abstract RingBuffer<T>(RingBufferImpl<T>) from RingBufferImpl<T>
+{
+
+    //------------------------------------------------------------------------------------------------------------------
+    /**
+     * Constructor.
+     * @param  {Int}    p_numElements  The number of elements in the ring.
+     * @param  {T}      p_defaultValue The default value to place in the elements at start.
+     * @return {[type]}
+     */
+    public function new(p_numElements : Int, p_defaultValue : T)
+    {
+        this = new RingBufferImpl(p_numElements, p_defaultValue);
+    }
+
+    @:arrayAccess public inline function get(p_index : Int)
+    {
+        return this._elements[p_index];
+    }
+
+    @:arrayAccess public inline function set(p_index : Int, p_value : T)
+    {
+        this._elements[p_index] = p_value;
+        return p_value;
+    }
+}
+
 /**
  * A simple ring buffer able to take any number of elements of any type.
  * When a new value is inserted, the first value will be removed.
  * @type {[type]}
  */
-class RingBuffer<T>
+class RingBufferImpl<T>
 {
-    private var _elements : Array<T> = null;
+    public var _elements : Array<T> = null;
 
     //------------------------------------------------------------------------------------------------------------------
     /**

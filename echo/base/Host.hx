@@ -263,7 +263,7 @@ class Host extends ClientHostBase
 		var average : Int = 0;
 		for (i in 0 ... 5)
 		{
-			average += client.lastPings.get(i);
+			average += client.lastPings[i];
 		}
 		average = Std.int(average / 5);
 		client.ping = average;

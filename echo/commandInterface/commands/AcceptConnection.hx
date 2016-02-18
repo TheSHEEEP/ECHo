@@ -44,7 +44,7 @@ class AcceptConnection extends Command
 	 * @param  {InputBytes} p_inBuffer The buffer to read from.
 	 * @return {Void}
 	 */
-	override public function readCommandData(p_inBuffer :InputBytes) :Void
+	override public function readCommandData(p_inBuffer :InputBytes) : Void
 	{
 		clientId = p_inBuffer.readInt32();
 		if (p_inBuffer.position < p_inBuffer.length)
