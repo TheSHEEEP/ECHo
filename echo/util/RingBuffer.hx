@@ -45,8 +45,7 @@ class RingBuffer<T>
      * @param  {Int}    p_index The index.
      * @return {[type]}
      */
-    @:arrayAccess
-    public inline function get(p_index : Int)
+    @:arrayAccess public inline function get(p_index : Int)
     {
       return _elements[p_index];
     }
@@ -57,10 +56,19 @@ class RingBuffer<T>
      * @param  {Int}    p_index The index.
      * @return {[type]}
      */
-    @:arrayAccess
-    public inline function set(p_index : Int, p_value : T)
+    @:arrayAccess public inline function set(p_index : Int, p_value : T)
     {
         _elements[p_index] = p_value;
         return p_value;
+    }
+
+    //------------------------------------------------------------------------------------------------------------------
+    /**
+     * Offer iterator access.
+     * @return {Iterator<T>}
+     */
+    public function iterator() : Iterator<T>
+    {
+        return _elements.iterator();
     }
 }

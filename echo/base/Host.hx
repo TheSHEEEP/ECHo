@@ -12,6 +12,7 @@ import echo.commandInterface.commands.ClientList;
 import echo.commandInterface.commands.NotifyDisconnect;
 import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
+import echo.commandInterface.commands.PingList;
 import echo.commandInterface.Command;
 
 /**
@@ -30,7 +31,7 @@ class Host extends ClientHostBase
 	private var _maxConn 				: Int = 0;
 	private var _idCounter				: Int = 1; //< Has to start at 1 as 0 is the "everyone" id
 
-	private var _pingTime 		: Float = 1.0;
+	private var _pingTime 		: Float = 0.5;
 	private var _pingListTime 	: Float = 2.0;
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -93,7 +94,7 @@ class Host extends ClientHostBase
 		_pingTime -= p_timeSinceLastFrame;
 		if (_pingTime <= 0.0)
 		{
-			_pingTime = 1.0;
+			_pingTime = 0.5;
 
 			var command : Ping = new Ping();
 			command.setSenderId(_hostConnection.getId());
@@ -107,11 +108,19 @@ class Host extends ClientHostBase
 		{
 			_pingListTime = 2.0;
 
-			// TODO: here
-			// var command : PingList = new PingList();
-			// command.setSenderId(_hostConnection.getId());
-			// command.setRecipientId(0);
-			// sendCommand(command);
+			var command : PingList = new PingList();
+			_clientListMutex.acquire();
+			for(client in _connectedClients)
+			{
+				var info : PingInfo = new PingInfo();
+				info.id = client.id;
+				info.ping = client.ping;
+				command.list.push(info);
+			}
+			_clientListMutex.release();
+			command.setSenderId(_hostConnection.getId());
+			command.setRecipientId(0);
+			sendCommand(command);
 		}
 	}
 
@@ -250,7 +259,14 @@ class Host extends ClientHostBase
 
 		// Take note of the time in the correct client's variable
 		var client : ExtendedClientData = p_command.getData();
-		client.ping = Std.int(totalTime * 1000.0);
+		client.lastPings.add(Std.int(totalTime * 1000.0));
+		var average : Int = 0;
+		for (i in 0 ... 5)
+		{
+			average += client.lastPings.get(i);
+		}
+		average = Std.int(average / 5);
+		client.ping = average;
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

@@ -41,7 +41,7 @@ class InviteClient extends Command
 	 * @param  {InputBytes} p_inBuffer The buffer to read from.
 	 * @return {Void}
 	 */
-	override public function readCommandData(p_inBuffer :InputBytes) :Void
+	override public function readCommandData(p_inBuffer :InputBytes) : Void
 	{
 		hostId = p_inBuffer.readInt32();
 		secret = p_inBuffer.readInt32();

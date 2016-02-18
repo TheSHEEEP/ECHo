@@ -4,6 +4,7 @@ import haxe.Timer;
 import echo.commandInterface.CommandRegister;
 import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
+import echo.commandInterface.commands.PingList;
 import echo.commandInterface.commands.InviteClient;
 import echo.commandInterface.commands.RejectConnection;
 import echo.commandInterface.commands.AcceptConnection;
@@ -40,11 +41,13 @@ class ECHo
 	{
 		// Register all predefined commands
 		registerPredefinedCommand("ping", Ping);
-		registerPredefinedCommand("ping", Ping);
+        registerPredefinedCommand("pong", Pong);
+		registerPredefinedCommand("pingList", PingList);
 		registerPredefinedCommand("inviteClient", InviteClient);
 		registerPredefinedCommand("rejectConnection", RejectConnection);
 		registerPredefinedCommand("acceptConnection", AcceptConnection);
 		registerPredefinedCommand("requestConnection", RequestConnection);
+		registerPredefinedCommand("notifyDisconnect", NotifyDisconnect);
 		registerPredefinedCommand("clientList", ClientList);
 
 		// Compile command IDs

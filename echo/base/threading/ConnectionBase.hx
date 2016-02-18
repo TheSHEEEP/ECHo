@@ -26,7 +26,7 @@ class ConnectionBase
 	private var _mainSocket : Socket = null;
 	private var _id			: Int = -1;
 
-	private var _tickTime	: Float = 0.05;
+	private var _tickTime	: Float = 0.01;
 	private var _doShutdown : Bool = false;
 	private var _chunkSize 	: Int = 128;
 
@@ -180,7 +180,7 @@ class ConnectionBase
 
 		// Send it
 		var written : Int = p_clientData.socket.output.writeBytes(finalBytes, 0, toSend);
-		if (ECHo.logLevel >= 4) trace('Sent bytes for command ${p_command.getName()}: $written/${finalBytes.length}');
+		if (ECHo.logLevel >= 5) trace('Sent bytes for command ${p_command.getName()}: $written/${finalBytes.length}');
 		if (written < finalBytes.length)
 		{
 			if (ECHo.logLevel >= 5)
@@ -383,7 +383,6 @@ class ConnectionBase
 			source = new InputBytes(p_clientData.recvBuffer.getBytes());
 		}
 		p_clientData.recvBuffer = new BytesBuffer();
-		trace('Bytes storing: ${source.length}');
 
 		// Get a command instance from the ID
 		var id : Int = source.readInt32();

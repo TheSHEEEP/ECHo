@@ -10,6 +10,9 @@ import echo.commandInterface.commands.RequestConnection;
 import echo.commandInterface.commands.AcceptConnection;
 import echo.commandInterface.commands.ClientList;
 import echo.commandInterface.commands.NotifyDisconnect;
+import echo.commandInterface.commands.Ping;
+import echo.commandInterface.commands.Pong;
+import echo.commandInterface.commands.PingList;
 import echo.commandInterface.Command;
 import echo.util.ConditionalTimer;
 
@@ -61,6 +64,9 @@ class Client extends ClientHostBase
 		addCommandCallback(AcceptConnection.getId(), executeClientCommand);
 		addCommandCallback(ClientList.getId(), executeClientCommand);
 		addCommandCallback(NotifyDisconnect.getId(), executeClientCommand);
+		addCommandCallback(Ping.getId(), executeClientCommand);
+		addCommandCallback(Pong.getId(), executeClientCommand);
+		addCommandCallback(PingList.getId(), executeClientCommand);
 
 		// Randomize hostId to prevent external sources picking a default
 		_clientConnection.getHostData().id = Std.int(Math.random() * 10000);
@@ -130,6 +136,10 @@ class Client extends ClientHostBase
 		else if (id == ClientList.getId()) handleClientList(cast(p_command, ClientList));
 		// Notify client disconnected
 		else if (id == NotifyDisconnect.getId()) handleNotifyDisconnect(cast(p_command, NotifyDisconnect));
+		// Ping
+		else if (id == Ping.getId()) handlePing(cast(p_command, Ping));
+		// PingList
+		else if (id == PingList.getId()) handlePingList(cast(p_command, PingList));
 		else
 		{
 			if (ECHo.logLevel >= 2)
@@ -295,5 +305,52 @@ class Client extends ClientHostBase
 
 		// Just print
 		if (ECHo.logLevel >= 4) trace('Client with ID ${p_command.clientId} disconnected.');
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the Ping command.
+	 * @param  {Ping} p_command The command to handle.
+	 * @return {Void}
+	 */
+	private function handlePing(p_command : Ping) : Void
+	{
+		// Ignore this when not coming from the host
+		if (p_command.getSenderId() != _clientConnection.getHostData().id)
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: handlePing: sender was not host: "
+											+ p_command.getSenderId());
+			return;
+		}
+
+		// Immediatly answer with the Pong command
+		var command : Pong = new Pong();
+		command.pingTimestamp = p_command.getTimestamp();
+		command.setSenderId(_clientConnection.getId());
+		command.setRecipientId(-1);
+		sendCommand(command);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Handles the PingList command.
+	 * @param  {PingList} p_command The command to handle.
+	 * @return {Void}
+	 */
+	private function handlePingList(p_command : PingList) : Void
+	{
+		// Ignore this when not coming from the host
+		if (p_command.getSenderId() != _clientConnection.getHostData().id)
+		{
+			if (ECHo.logLevel >= 2) trace("Warning: handlePingList: sender was not host: "
+											+ p_command.getSenderId());
+			return;
+		}
+
+		// Just print
+		for(item in p_command.list)
+		{
+			trace('Item values: ${item.id} / ${item.ping}');
+		}
 	}
 }
