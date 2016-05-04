@@ -3,9 +3,9 @@
 # Easy Client/Host (ECHo)
 
 Easy to use TCP client / host library with callbacks and host migration to use for games or other applications.  
-Only works on the CPP platform due to its use of multithreading.  
+Only works on the CPP platform due to its use of multithreading - for now.  
 
-To get a better understanding of how this library is built and works, read the [manual here][94ea2a34]. (Will be transferred to github wiki at some point)
+To get a better understanding of how this library is built and works, read the [manual here][94ea2a34]. (Will be transferred to github wiki at a later point, when it is more stable and usable)
 
 ## License
 
