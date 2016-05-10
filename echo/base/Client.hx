@@ -346,11 +346,5 @@ class Client extends ClientHostBase
 											+ p_command.getSenderId());
 			return;
 		}
-
-		// Just print
-		for(item in p_command.list)
-		{
-			trace('Item values: ${item.id} / ${item.ping}');
-		}
 	}
 }

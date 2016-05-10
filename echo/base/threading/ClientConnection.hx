@@ -81,7 +81,10 @@ class ClientConnection extends ConnectionBase
 				TryCatchMacros.tryCatchBlockedOk( "client doHostConnection", function() {
 					doHostConnection();
 				},
-				shutdown);
+				function() {
+					trace("Could not connect to host, shutting down client.");
+					shutdown();
+				});
 			}
 
 			// Send to host step
@@ -137,7 +140,7 @@ class ClientConnection extends ConnectionBase
 	{
 		if (_doShutdown) return;
 
-		_mainSocket.setTimeout(1.0);
+		_mainSocket.setTimeout(5.0);
 		_mainSocket.connect(_mainHost, _port);
 		_mainSocket.setBlocking(false);
 		_isConnected = true;
