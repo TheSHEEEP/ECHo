@@ -4,6 +4,7 @@ import haxe.ds.ArraySort;
 import haxe.ds.StringMap;
 import haxe.ds.IntMap;
 import echo.ECHo;
+import echo.util.Logger;
 
 class CommandRegister
 {
@@ -84,8 +85,7 @@ class CommandRegister
 		// Dump infos
 		if (ECHo.logLevel >= 5)
 		{
-			trace("These are our commands -> ids: ");
-			trace(_commandNameToId.toString());
+			Logger.instance().log("Verbose", "These are our commands -> ids:\n" + _commandNameToId.toString());
 		}
 	}
 

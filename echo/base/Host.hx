@@ -14,6 +14,7 @@ import echo.commandInterface.commands.Ping;
 import echo.commandInterface.commands.Pong;
 import echo.commandInterface.commands.PingList;
 import echo.commandInterface.Command;
+import echo.util.Logger;
 
 /**
  * Host class.
@@ -147,7 +148,7 @@ class Host extends ClientHostBase
 		{
 			if (ECHo.logLevel >= 2)
 			{
-				trace("Warning: executeHostCommand: Unhandled host command: " + p_command.getName());
+				Logger.instance().log("Warning", "executeHostCommand: Unhandled host command: " + p_command.getName());
 			}
 			p_command.errorMsg = "Unhandled client command";
 			return false;
@@ -168,7 +169,7 @@ class Host extends ClientHostBase
 		// Make sure that this comes from one of the candidates
 		if (!isACandidateSecret(p_command.secret))
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handleRequestConnection: Received RequestConnection with wrong secret.");
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handleRequestConnection: Received RequestConnection with wrong secret.");
 			return;
 		}
 

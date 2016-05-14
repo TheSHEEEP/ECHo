@@ -8,6 +8,7 @@ import haxe.CallStack;
 import echo.base.data.ExtendedClientData;
 import echo.commandInterface.Command;
 import echo.util.TryCatchMacros;
+import echo.util.Logger;
 
 /**
  * The class doing all of the client's socket interaction.
@@ -82,7 +83,7 @@ class ClientConnection extends ConnectionBase
 					doHostConnection();
 				},
 				function() {
-					trace("Could not connect to host, shutting down client.");
+					if (ECHo.logLevel >= 1) Logger.instance().log("Error", "Could not connect to host, shutting down client.");
 					shutdown();
 				});
 			}
@@ -128,7 +129,7 @@ class ClientConnection extends ConnectionBase
 		_isConnected = false;
 		_mainSocket.close();
 
-		if (ECHo.logLevel >= 5) trace("Client threaded connection shut down.");
+		if (ECHo.logLevel >= 5) Logger.instance().log("Info", "Client threaded connection shut down.");
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -148,7 +149,7 @@ class ClientConnection extends ConnectionBase
 		_hostData.ip = _mainSocket.peer().host.toString();
 		_hostData.socket = _mainSocket;
 
-		if (ECHo.logLevel >= 5) trace("Successfully established socket connection to host.");
+		if (ECHo.logLevel >= 5) Logger.instance().log("Verbose", "Successfully established socket connection to host.");
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -166,7 +167,8 @@ class ClientConnection extends ConnectionBase
 		// Keep sending rest bytes until all are sent, only then, send the next command
 		if (_hostData.sendBuffer.length != 0)
 		{
-			if (ECHo.logLevel >= 5) trace('Client: still got bytes to send: ' + _hostData.sendBuffer.length);
+			if (ECHo.logLevel >= 5) Logger.instance().log("Verbose",
+			'								Client: still got bytes to send: ' + _hostData.sendBuffer.length);
 			return;
 		}
 
@@ -198,7 +200,7 @@ class ClientConnection extends ConnectionBase
 		if (!receiveCommands(_hostData))
 		{
 			shutdown();
-			if (ECHo.logLevel >= 4) trace("Connection to host closed because of error (disconnect?).");
+			if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Connection to host closed because of error (disconnect?).");
 		}
 	}
 }

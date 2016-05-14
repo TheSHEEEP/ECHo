@@ -3,6 +3,10 @@ package echo.util;
 import haxe.macro.Expr;
 import haxe.io.Error;
 
+#if !macro
+import echo.util.Logger;
+#end
+
 /**
  * Some practical try catch macros to prevent cluttering the files with this.
  * @type {[type]}
@@ -34,11 +38,12 @@ class TryCatchMacros
 				default:
 					if (ECHo.logLevel >= 1)
 					{
-						trace("Unexpected string error in " + $p_name + " 1: " + stringError + ".");
-						trace("********** Callstack: **********");
-						trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
-						trace("********** Exception stack: **********");
-						trace(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+						var message : String = "Unexpected string error in " + $p_name + " 1: " + stringError + ".\n";
+						message += "********** Callstack: **********" + "\n";
+						message += haxe.CallStack.toString(haxe.CallStack.callStack()) + "\n";
+						message += "********** Exception stack: **********" + "\n";
+						message += haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+						echo.util.Logger.instance().log("Error", message);
 					}
 					$p_onError();
 				}
@@ -55,11 +60,12 @@ class TryCatchMacros
 					{
 						if (ECHo.logLevel >= 1)
 						{
-							trace("Unexpected error in " + $p_name + " 2: " + error);
-							trace("********** Callstack: **********");
-							trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
-							trace("********** Exception stack: **********");
-							trace(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+							var message : String = "Unexpected error in " + $p_name + " 2: " + error + "\n";
+							message += "********** Callstack: **********" + "\n";
+							message += haxe.CallStack.toString(haxe.CallStack.callStack()) + "\n";
+							message += "********** Exception stack: **********" + "\n";
+							message += haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+							echo.util.Logger.instance().log("Error", message);
 						}
 						$p_onError();
 					}
@@ -68,11 +74,12 @@ class TryCatchMacros
 				{
 					if (ECHo.logLevel >= 1)
 					{
-						trace("Error: End-Of-File in " + $p_name);
-						trace("********** Callstack: **********");
-						trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
-						trace("********** Exception stack: **********");
-						trace(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+						var message : String = "Error: End-Of-File in " + $p_name + "\n";
+						message += "********** Callstack: **********" + "\n";
+						message += haxe.CallStack.toString(haxe.CallStack.callStack()) + "\n";
+						message += "********** Exception stack: **********" + "\n";
+						message += haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+						echo.util.Logger.instance().log("Error", message);
 					}
 					$p_onError();
 				}
@@ -80,11 +87,12 @@ class TryCatchMacros
 				{
 					if (ECHo.logLevel >= 1)
 					{
-						trace("Unexpected error in " + $p_name + " 3: " + Type.getClass(error) + ": " + error);
-						trace("********** Callstack: **********");
-						trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
-						trace("********** Exception stack: **********");
-						trace(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+						var message : String = "Unexpected error in " + $p_name + " 3: " + Type.getClass(error) + ": " + error + "\n";
+						message += "********** Callstack: **********" + "\n";
+						message += haxe.CallStack.toString(haxe.CallStack.callStack()) + "\n";
+						message += "********** Exception stack: **********" + "\n";
+						message += haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+						echo.util.Logger.instance().log("Error", message);
 					}
 					$p_onError();
 				}

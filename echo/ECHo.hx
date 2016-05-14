@@ -11,6 +11,7 @@ import echo.commandInterface.commands.AcceptConnection;
 import echo.commandInterface.commands.RequestConnection;
 import echo.commandInterface.commands.ClientList;
 import echo.commandInterface.commands.NotifyDisconnect;
+import echo.util.Logger;
 
 /**
  * ECHo startup & shutdown class.
@@ -26,7 +27,7 @@ class ECHo
 	 * 1	- Errors
 	 * 2 	- Warnings
 	 * 4 	- Important infos
-	 * 5	- Everything
+	 * 5	- Verbose - EVERYTHING
 	 * @type {Int}
 	 */
 	public static var logLevel : Int = 5;

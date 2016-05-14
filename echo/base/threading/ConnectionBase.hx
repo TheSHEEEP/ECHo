@@ -14,6 +14,7 @@ import echo.commandInterface.CommandRegister;
 import echo.util.InputBytes;
 import echo.util.OutputBytes;
 import echo.util.TryCatchMacros;
+import echo.util.Logger;
 
 /**
  * Common class for host & client connections.
@@ -171,7 +172,7 @@ class ConnectionBase
 		if (p_clientData.sendBuffer.length > 0)
 		{
 			p_clientData.sendBuffer.addBytes(finalBytes, 0, finalBytes.length);
-			if (ECHo.logLevel >= 5) trace('sendCommand: still got bytes left to send (${p_clientData.sendBuffer.length}), appending new command to buffer');
+			if (ECHo.logLevel >= 5) Logger.instance().log("Verbose", 'sendCommand: still got bytes left to send (${p_clientData.sendBuffer.length}), appending new command to buffer');
 			return;
 		}
 
@@ -180,12 +181,12 @@ class ConnectionBase
 
 		// Send it
 		var written : Int = p_clientData.socket.output.writeBytes(finalBytes, 0, toSend);
-		if (ECHo.logLevel >= 5) trace('Sent bytes for command ${p_command.getName()}: $written/${finalBytes.length}');
+		if (ECHo.logLevel >= 5) Logger.instance().log("Verbose", 'Sent bytes for command ${p_command.getName()}: $written/${finalBytes.length}');
 		if (written < finalBytes.length)
 		{
 			if (ECHo.logLevel >= 5)
 			{
-				trace("Did not write all bytes on sendCommand: " + written + "/" + finalBytes.length);
+				Logger.instance().log("Verbose", "Did not write all bytes on sendCommand: " + written + "/" + finalBytes.length);
 			}
 
 			if (!p_forceFullSend)
@@ -198,7 +199,7 @@ class ConnectionBase
 				// Force a full send
 				if (ECHo.logLevel >= 5)
 				{
-					trace("Forcing full send command write.");
+					Logger.instance().log("Verbose", "Forcing full send command write.");
 				}
 				p_clientData.socket.setBlocking(true);
 				p_clientData.socket.setTimeout(100.0);
@@ -235,7 +236,7 @@ class ConnectionBase
 		{
 			if (ECHo.logLevel >= 5)
 			{
-				trace("Did not write all bytes on sendLeftoverBytes: " + written + "/" + bytes.length);
+				Logger.instance().log("Verbose", "Did not write all bytes on sendLeftoverBytes: " + written + "/" + bytes.length);
 			}
 
 			if (!p_forceFullSend)
@@ -248,7 +249,7 @@ class ConnectionBase
 				// Force a full send
 				if (ECHo.logLevel >= 5)
 				{
-					trace("Forcing full send leftovers write.");
+					Logger.instance().log("Verbose", "Forcing full send leftovers write.");
 				}
 				p_clientData.socket.setBlocking(true);
 				p_clientData.socket.setTimeout(1000.0);
@@ -323,7 +324,7 @@ class ConnectionBase
 					if (toRead >= 4)
 					{
 						p_clientData.expectedRestReceive = _readBytes.getInt32(pos);
-						if (ECHo.logLevel >= 5) trace("Expected command size: " + p_clientData.expectedRestReceive);
+						if (ECHo.logLevel >= 5) Logger.instance().log("Verbose", "Expected command size: " + p_clientData.expectedRestReceive);
 						pos += 4;
 						toRead -= 4;
 
@@ -352,7 +353,7 @@ class ConnectionBase
 					{
 						if (ECHo.logLevel >= 1)
 						{
-							trace("Error: Not even the first 4 bytes of command could be received. If this ever happens, it must be handled by ECHo. Which it does not currently do...");
+							Logger.instance().log("Error", "Not even the first 4 bytes of command could be received. If this ever happens, it must be handled by ECHo. Which it does not currently do...");
 							return false;
 						}
 					}
@@ -389,12 +390,12 @@ class ConnectionBase
 		var command : Command = CommandFactory.getInst().createCommand(id);
 		if (command == null)
 		{
-			if (ECHo.logLevel >= 1) trace("Error: storeCommandFromData: Could not store incoming command, "
+			if (ECHo.logLevel >= 1) Logger.instance().log("Error", "storeCommandFromData: Could not store incoming command, "
 											+ "id unknown: " + id);
 			trace(haxe.CallStack.callStack());
 			return;
 		}
-		if (ECHo.logLevel >= 5) trace("Storing incoming command " + command.getName());
+		if (ECHo.logLevel >= 5) Logger.instance().log("Verbose", "Storing incoming command " + command.getName());
 
 		// Read the data
 		command.setData(p_clientData);
@@ -402,7 +403,7 @@ class ConnectionBase
 		command.readCommandData(source);
 		if (source.position != source.length)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: storeCommandFromData: there are unused bytes after "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "storeCommandFromData: there are unused bytes after "
 											+ "reading input command: " + command.getName() + " "
 											+ source.position + "/" + source.length);
 		}

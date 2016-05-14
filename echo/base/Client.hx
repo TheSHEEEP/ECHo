@@ -15,6 +15,7 @@ import echo.commandInterface.commands.Pong;
 import echo.commandInterface.commands.PingList;
 import echo.commandInterface.Command;
 import echo.util.ConditionalTimer;
+import echo.util.Logger;
 
 /**
  * The state the client can be in.
@@ -144,7 +145,7 @@ class Client extends ClientHostBase
 		{
 			if (ECHo.logLevel >= 2)
 			{
-				trace("Warning: executeClientCommand: Unhandled client command: " + p_command.getName());
+				Logger.instance().log("Warning", "executeClientCommand: Unhandled client command: " + p_command.getName());
 			}
 			p_command.errorMsg = "Unhandled client command";
 			return false;
@@ -164,7 +165,7 @@ class Client extends ClientHostBase
 		// Ignore this when already connected
 		if (_isConnected)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handleInviteClient: already connected! Sender was : "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handleInviteClient: already connected! Sender was : "
 											+ p_command.getSenderId());
 			return;
 		}
@@ -207,7 +208,7 @@ class Client extends ClientHostBase
 		// Ignore this when not coming from the host
 		if (p_command.getSenderId() != _clientConnection.getHostData().id)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handleRejectConnection: sender was not host: "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handleRejectConnection: sender was not host: "
 											+ p_command.getSenderId());
 			return;
 		}
@@ -219,15 +220,15 @@ class Client extends ClientHostBase
 			_connection.shutdown();
 			_isConnected = false;
 			_state = ClientState.None;
-			if (ECHo.logLevel >= 4) trace("Info: handleRejectConnection: Host rejected connection due to full room.");
+			if (ECHo.logLevel >= 4) Logger.instance().log("Info", "handleRejectConnection: Host rejected connection due to full room.");
 		case RejectionReason.AlreadyConnected:
 			// Nothing
-			if (ECHo.logLevel >= 4) trace("Info: handleRejectConnection: Host rejected connection due to AlreadyConnected.");
+			if (ECHo.logLevel >= 4) Logger.instance().log("Info", "handleRejectConnection: Host rejected connection due to AlreadyConnected.");
 		default:
 			_connection.shutdown();
 			_isConnected = false;
 			_state = ClientState.None;
-			if (ECHo.logLevel >= 2) trace("Warning: handleRejectConnection: Connection rejected without reason.");
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handleRejectConnection: Connection rejected without reason.");
 		}
 
 		// Set the flag
@@ -245,7 +246,7 @@ class Client extends ClientHostBase
 		// Ignore this when not coming from the host
 		if (p_command.getSenderId() != _clientConnection.getHostData().id)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handleAcceptConnection: sender was not host: "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handleAcceptConnection: sender was not host: "
 											+ p_command.getSenderId());
 			return;
 		}
@@ -279,7 +280,7 @@ class Client extends ClientHostBase
 		// Ignore this when not coming from the host
 		if (p_command.getSenderId() != _clientConnection.getHostData().id)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handleClientList: sender was not host: "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handleClientList: sender was not host: "
 											+ p_command.getSenderId());
 			return;
 		}
@@ -298,13 +299,13 @@ class Client extends ClientHostBase
 		// Ignore this when not coming from the host
 		if (p_command.getSenderId() != _clientConnection.getHostData().id)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handleNotifyDisconnect: sender was not host: "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handleNotifyDisconnect: sender was not host: "
 											+ p_command.getSenderId());
 			return;
 		}
 
 		// Just print
-		if (ECHo.logLevel >= 4) trace('Client with ID ${p_command.clientId} disconnected.');
+		if (ECHo.logLevel >= 4) Logger.instance().log("Info", 'Client with ID ${p_command.clientId} disconnected.');
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -318,7 +319,7 @@ class Client extends ClientHostBase
 		// Ignore this when not coming from the host
 		if (p_command.getSenderId() != _clientConnection.getHostData().id)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handlePing: sender was not host: "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handlePing: sender was not host: "
 											+ p_command.getSenderId());
 			return;
 		}
@@ -342,7 +343,7 @@ class Client extends ClientHostBase
 		// Ignore this when not coming from the host
 		if (p_command.getSenderId() != _clientConnection.getHostData().id)
 		{
-			if (ECHo.logLevel >= 2) trace("Warning: handlePingList: sender was not host: "
+			if (ECHo.logLevel >= 2) Logger.instance().log("Warning", "handlePingList: sender was not host: "
 											+ p_command.getSenderId());
 			return;
 		}

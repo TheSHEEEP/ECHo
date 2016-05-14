@@ -7,6 +7,7 @@ import cpp.vm.Thread;
 import echo.commandInterface.Command;
 import echo.base.threading.ConnectionBase;
 import echo.util.ConditionalTimer;
+import echo.util.Logger;
 
 /**
  * Common interface for Client & Host classes.

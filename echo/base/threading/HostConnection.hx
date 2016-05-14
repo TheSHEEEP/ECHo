@@ -16,6 +16,7 @@ import echo.commandInterface.commands.Pong;
 import echo.commandInterface.commands.NotifyDisconnect;
 import echo.util.TryCatchMacros;
 import echo.util.ConditionalTimer;
+import echo.util.Logger;
 
 /**
  * The class doing all of the host's socket interaction.
@@ -151,7 +152,7 @@ class HostConnection extends ConnectionBase
 		_connectedClients.splice(0, _connectedClients.length);
 		_clientListMutex.release();
 
-		if (ECHo.logLevel >= 5) trace("Host threaded connection shut down.");
+		if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Host threaded connection shut down.");
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
@@ -169,7 +170,7 @@ class HostConnection extends ConnectionBase
 		data.ip = connectedClient.peer().host.toString();
 		data.socket = connectedClient;
 
-		if (ECHo.logLevel >= 5) trace("Incoming connection from " + connectedClient.peer().host.toString()
+		if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Incoming connection from " + connectedClient.peer().host.toString()
 									+ " on port " + connectedClient.peer().port);
 
 		// If we have too many clients already connected, send the reject message and close
@@ -180,7 +181,7 @@ class HostConnection extends ConnectionBase
 			command.reason = RejectionReason.RoomIsFull;
 			command.setSenderId(_id);
 			sendCommand(command, data, true);
-			if (ECHo.logLevel >= 4) trace("Closing connection due to full room.");
+			if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Closing connection due to full room.");
 			connectedClient.close();
 		}
 		else
@@ -200,7 +201,7 @@ class HostConnection extends ConnectionBase
 				_parent.checkFlag.bind("c:" + RequestConnection.getId() + ":" + command.secret),
 				_parent.removeFlag.bind("c:" + RequestConnection.getId() + ":" + command.secret),
 				function () {
-					if (ECHo.logLevel >= 5) trace("Closing candidate connection due to no answer to inviteclient.");
+					if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Closing candidate connection due to no answer to inviteclient.");
 					data.socket.close();
 					_clientListMutex.acquire();
 					_connectionCandidates.remove(data);
@@ -233,7 +234,7 @@ class HostConnection extends ConnectionBase
 					sendLeftoverBytes(candidate);
 				},
 				function() {
-					if (ECHo.logLevel >= 5) trace("Closing candidate connection due host->candidate sending error.");
+					if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Closing candidate connection due host->candidate sending error.");
 					candidate.socket.close();
 					_connectionCandidates.remove(candidate);
 					throw "";
@@ -243,7 +244,7 @@ class HostConnection extends ConnectionBase
 			// Keep sending rest bytes until all are sent, only then, send the next command
 			if (candidate.sendBuffer.length != 0)
 			{
-				if (ECHo.logLevel >= 5) trace('Host: candidate still got bytes to send: ' + candidate.sendBuffer.length);
+				if (ECHo.logLevel >= 5) Logger.instance().log("Verbose", 'Host: candidate still got bytes to send: ' + candidate.sendBuffer.length);
 				continue;
 			}
 
@@ -257,7 +258,7 @@ class HostConnection extends ConnectionBase
 							sendCommand(command, candidate);
 						},
 						function() {
-							if (ECHo.logLevel >= 5) trace("Closing candidate connection due special host->candidate sending error.");
+							if (ECHo.logLevel >= 4) Logger.instance().log("Verbose", "Closing candidate connection due to special host->candidate sending error.");
 							candidate.socket.close();
 							_connectionCandidates.remove(candidate);
 							throw "";
@@ -277,7 +278,7 @@ class HostConnection extends ConnectionBase
 				},
 				function() {
 					removeClient(client);
-					if (ECHo.logLevel >= 4) trace("Connected client removed due to error in connection.");
+					if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Connected client removed due to error in connection.");
 					throw "";
 				}
 		 	);
@@ -285,7 +286,7 @@ class HostConnection extends ConnectionBase
 			// Keep sending rest bytes until all are sent, only then, send the next command
 			if (client.sendBuffer.length != 0)
 			{
-				if (ECHo.logLevel >= 5) trace('Host: client ${client.id} still got bytes to send: ' + client.sendBuffer.length);
+				if (ECHo.logLevel >= 5) Logger.instance().log("Verbose", 'Host: client ${client.id} still got bytes to send: ' + client.sendBuffer.length);
 				continue;
 			}
 
@@ -301,7 +302,7 @@ class HostConnection extends ConnectionBase
 						},
 						function() {
 							removeClient(client);
-							if (ECHo.logLevel >= 4) trace("Connected client removed due to error in connection.");
+							if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Connected client removed due to error in connection.");
 						}
 				 	);
 				}
@@ -325,7 +326,7 @@ class HostConnection extends ConnectionBase
 			{
 				_connectionCandidates[index].socket.close();
 				_connectionCandidates.splice(index, 1);
-				if (ECHo.logLevel >= 4) trace("Connection candidate removed due to error in connection.");
+				if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Connection candidate removed due to error in connection.");
 			}
 			index--;
 		}
@@ -338,7 +339,7 @@ class HostConnection extends ConnectionBase
 			if (!receiveCommands(_connectedClients[index]))
 			{
 				removeClient(_connectedClients[index]);
-				if (ECHo.logLevel >= 4) trace("Connected client removed due to error in connection.");
+				if (ECHo.logLevel >= 4) Logger.instance().log("Info", "Connected client removed due to error in connection.");
 			}
 			index--;
 		}

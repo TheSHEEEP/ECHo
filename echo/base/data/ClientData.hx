@@ -4,6 +4,7 @@ import sys.net.Socket;
 import echo.util.InputBytes;
 import echo.util.OutputBytes;
 import echo.util.RingBuffer;
+import echo.util.Logger;
 
 /**
  * The data belonging to a single client.
@@ -66,6 +67,6 @@ class ClientData
 	 */
 	public function dump() : Void
 	{
-		trace('\nId: $id\nIdentifier: $identifier\nHost: $isHost\nPing: $ping');
+		Logger.instance().log("Info", '\nId: $id\nIdentifier: $identifier\nHost: $isHost\nPing: $ping');
 	}
 }
